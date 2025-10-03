@@ -106,4 +106,4 @@ export const categories = [
   { key: "hotel", label: "Готелі" },
   { key: "park", label: "Парки" },
   { key: "attraction", label: "Місця" },
-] as const;
+] as const satisfies ReadonlyArray<{ key: string; label: string }>;

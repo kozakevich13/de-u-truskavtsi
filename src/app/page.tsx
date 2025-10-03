@@ -4,16 +4,18 @@ import { useMemo, useState } from "react";
 import SearchBar from "./components/SearchBar";
 import CategoryFilter from "./components/CategoryFilter";
 import PlaceCard from "./components/PlaceCard";
-import MapPlaceholder from "./components/MapPlaceholder";
 import { places as mock, categories } from "./lib/data/places";
 import type { Place } from "./types/place";
-import OSMMap from "./components/OSMMap";
-
+import { SelectedPoint } from "./components/OSMMap";
+import dynamic from "next/dynamic";
 export default function HomePage() {
+  const OSMMap = dynamic(() => import("./components/OSMMap"), { ssr: false });
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
-  const [mapPoint, setMapPoint] = useState<any | undefined>(undefined);
+  const [mapPoint, setMapPoint] = useState<SelectedPoint | undefined>(
+    undefined
+  );
 
   const filtered: Place[] = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -69,7 +71,7 @@ export default function HomePage() {
 
       <section className="mb-6">
         <CategoryFilter
-          items={categories as any}
+          items={categories}
           selected={selected}
           onToggle={toggleCat}
         />
