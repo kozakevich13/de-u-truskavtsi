@@ -2,7 +2,13 @@
 "use client";
 import type { Place } from "../types/place";
 
-export default function PlaceCard({ place }: { place: Place }) {
+export default function PlaceCard({
+  place,
+  onShow,
+}: {
+  place: Place;
+  onShow?: (p: Place) => void;
+}) {
   return (
     <article className="group rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/80">
       <div className="flex items-start justify-between gap-3">
@@ -20,6 +26,7 @@ export default function PlaceCard({ place }: { place: Place }) {
           </span>
         )}
       </div>
+
       <div className="mt-3 flex items-center justify-between">
         <span
           className={
@@ -29,16 +36,13 @@ export default function PlaceCard({ place }: { place: Place }) {
         >
           {place.openNow ? "Відкрито зараз" : "Зачинено"}
         </span>
-        {place.lat && place.lng && (
-          <a
-            className="text-xs text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
-            href={`https://www.google.com/maps?q=${place.lat},${place.lng}`}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            На мапі →
-          </a>
-        )}
+
+        <button
+          onClick={() => onShow?.(place)}
+          className="text-xs text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+        >
+          Показати на мапі →
+        </button>
       </div>
     </article>
   );

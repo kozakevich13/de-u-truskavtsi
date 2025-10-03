@@ -83,6 +83,16 @@ export const places: Place[] = [
     rating: 4.9,
     openNow: true,
   },
+  {
+    id: "11",
+    name: "Кафе «18:27»",
+    category: "cafe",
+    address: "вулиця Роксолани, 14, Трускавець",
+    rating: 4.6,
+    openNow: true,
+    lat: 49.27869067887637,
+    lng: 23.499539425764016,
+  },
 ];
 
 export const categories = [

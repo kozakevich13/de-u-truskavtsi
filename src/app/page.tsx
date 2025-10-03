@@ -13,6 +13,7 @@ export default function HomePage() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
+  const [mapPoint, setMapPoint] = useState<any | undefined>(undefined);
 
   const filtered: Place[] = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -31,6 +32,16 @@ export default function HomePage() {
     setSelected((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+
+  function handleShowOnMap(p: Place) {
+    if (p.lat && p.lng) {
+      setMapPoint({ lat: p.lat, lng: p.lng, label: p.name });
+    } else {
+      console.warn(
+        "Для цього місця немає координат (lat/lng). Додайте їх у places.ts"
+      );
+    }
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -68,7 +79,7 @@ export default function HomePage() {
         <div className="lg:col-span-2">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {filtered.map((p) => (
-              <PlaceCard key={p.id} place={p} />
+              <PlaceCard key={p.id} place={p} onShow={handleShowOnMap} />
             ))}
             {filtered.length === 0 && (
               <div className="rounded-2xl border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -78,7 +89,7 @@ export default function HomePage() {
           </div>
         </div>
         <aside className="lg:col-span-1">
-          <OSMMap />
+          <OSMMap selected={mapPoint} />
         </aside>
       </section>
     </main>

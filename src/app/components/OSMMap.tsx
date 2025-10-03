@@ -1,9 +1,10 @@
 // src/components/OSMMap.tsx
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { useEffect } from "react";
 
 const DefaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -13,7 +14,22 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-export default function OSMMap() {
+export type SelectedPoint = {
+  lat: number;
+  lng: number;
+  label?: string;
+};
+
+function FlyTo({ point }: { point?: SelectedPoint }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!point) return;
+    map.flyTo([point.lat, point.lng], 17, { duration: 0.6 });
+  }, [point, map]);
+  return null;
+}
+
+export default function OSMMap({ selected }: { selected?: SelectedPoint }) {
   return (
     <MapContainer
       center={[49.279, 23.505]}
@@ -24,9 +40,14 @@ export default function OSMMap() {
         attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={[49.279, 23.505]}>
-        <Popup>Трускавець 💧</Popup>
-      </Marker>
+
+      <FlyTo point={selected} />
+
+      {selected && (
+        <Marker position={[selected.lat, selected.lng]}>
+          <Popup autoPan>{selected.label ?? "Обрана локація"}</Popup>
+        </Marker>
+      )}
     </MapContainer>
   );
 }
