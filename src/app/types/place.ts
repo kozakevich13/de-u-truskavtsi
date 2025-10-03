@@ -19,4 +19,6 @@ export interface Place {
   openNow?: boolean;
   lat?: number;
   lng?: number;
+  mainImage: string;
+  images?: string[];
 }
