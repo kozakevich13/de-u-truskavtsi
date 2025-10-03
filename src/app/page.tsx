@@ -7,6 +7,7 @@ import PlaceCard from "./components/PlaceCard";
 import MapPlaceholder from "./components/MapPlaceholder";
 import { places as mock, categories } from "./lib/data/places";
 import type { Place } from "./types/place";
+import OSMMap from "./components/OSMMap";
 
 export default function HomePage() {
   const [q, setQ] = useState("");
@@ -77,7 +78,7 @@ export default function HomePage() {
           </div>
         </div>
         <aside className="lg:col-span-1">
-          <MapPlaceholder />
+          <OSMMap />
         </aside>
       </section>
     </main>
