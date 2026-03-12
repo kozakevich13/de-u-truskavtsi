@@ -11,14 +11,15 @@ export type Category =
   | "attraction";
 
 export interface Place {
-  id: string;
+  id: number;
   name: string;
-  category: Category;
+  category: string;
   address: string;
-  rating?: number; // 0..5
-  openNow?: boolean;
-  lat?: number;
-  lng?: number;
-  mainImage: string;
-  images?: string[];
+  description: string | null;
+  images: string[] | null;
+  lat: number | null;
+  lng: number | null;
+  rating: number | null;
+  is_open_now: boolean | null;
+  created_at?: string;
 }

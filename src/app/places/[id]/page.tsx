@@ -1,25 +1,34 @@
-// src/app/places/[id]/page.tsx
-
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPlaceById, places } from "../../lib/data/places";
 import PlaceMap from "../../components/PlaceMap";
+import { supabase } from "../../lib/supabase";
 
-type Params = { params: { id: string } };
+type Params = {
+  params: Promise<{ id: string }>;
+};
 
-export function generateStaticParams() {
-  return places.map((p) => ({ id: p.id }));
-}
+export default async function PlacePage({ params }: Params) {
+  const { id } = await params;
 
-export default function PlacePage({ params }: Params) {
-  const place = getPlaceById(params.id);
-  if (!place) return notFound();
+  const { data: place, error } = await supabase
+    .from("places")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  const gallery =
-    place.images && place.images.length > 0
-      ? place.images
-      : [place.mainImage, place.mainImage, place.mainImage, place.mainImage];
+  if (error || !place) {
+    return notFound();
+  }
+
+  const mainImage =
+  place.main_image ||
+  (Array.isArray(place.image_url) ? place.image_url[0] : "");
+
+const gallery =
+  Array.isArray(place.image_url) && place.image_url.length > 0
+    ? place.image_url.filter((img: string) => img !== mainImage)
+    : [];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -32,18 +41,24 @@ export default function PlacePage({ params }: Params) {
 
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-transparent shadow-sm">
-          <Image
-            src={place.mainImage}
-            alt={place.name}
-            width={1600}
-            height={1000}
-            className="h-[320px] w-full object-cover md:h-[520px]"
-            priority
-          />
+          {mainImage ? (
+            <Image
+              src={mainImage}
+              alt={place.name}
+              width={1600}
+              height={1000}
+              className="h-[320px] w-full object-cover md:h-[520px]"
+              priority
+            />
+          ) : (
+            <div className="flex h-[320px] w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 md:h-[520px]">
+              Фото відсутнє
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 grid-rows-2 gap-3">
-          {gallery.slice(0, 4).map((url, i) => (
+          {gallery.slice(0, 4).map((url: string, i: number) => (
             <div
               key={i}
               className="overflow-hidden rounded-2xl border border-transparent shadow-sm"
@@ -57,6 +72,12 @@ export default function PlacePage({ params }: Params) {
               />
             </div>
           ))}
+
+          {gallery.length === 0 && (
+            <div className="col-span-2 row-span-2 flex items-center justify-center rounded-2xl bg-zinc-100 text-sm text-zinc-500">
+              Галерея відсутня
+            </div>
+          )}
         </div>
       </section>
 
@@ -71,8 +92,16 @@ export default function PlacePage({ params }: Params) {
                 Рейтинг: <b>★ {place.rating.toFixed(1)}</b>
               </div>
             )}
-            <div>Статус: {place.openNow ? "Відкрито" : "Зачинено"}</div>
+            <div>
+              Статус: {place.is_open_now ? "Відкрито" : "Зачинено"}
+            </div>
           </div>
+
+          {place.description && (
+            <p className="mt-4 text-sm leading-6 text-zinc-700">
+              {place.description}
+            </p>
+          )}
         </div>
 
         <aside className="lg:col-span-1">

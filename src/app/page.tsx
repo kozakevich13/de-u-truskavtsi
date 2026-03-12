@@ -1,15 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SearchBar from "./components/SearchBar";
 import CategoryFilter from "./components/CategoryFilter";
 import PlaceCard from "./components/PlaceCard";
-import { places as mock, categories } from "./lib/data/places";
 import type { Place } from "./types/place";
 import { SelectedPoint } from "./components/OSMMap";
 import dynamic from "next/dynamic";
+import { supabase } from "./lib/supabase";
+
+const categories = [
+  { key: "cafe", label: "Кавʼярні" },
+  { key: "restaurant", label: "Ресторани" },
+  { key: "shop", label: "Магазини" },
+  { key: "hotel", label: "Готелі" },
+  { key: "park", label: "Парки" },
+  { key: "mall", label: "ТЦ" },
+];
+
 export default function HomePage() {
   const OSMMap = dynamic(() => import("./components/OSMMap"), { ssr: false });
+
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
@@ -17,18 +31,41 @@ export default function HomePage() {
     undefined
   );
 
+  useEffect(() => {
+    async function fetchPlaces() {
+      const { data, error } = await supabase
+        .from("places")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error("Помилка завантаження місць:", error.message);
+        setPlaces([]);
+      } else {
+        setPlaces(data ?? []);
+      }
+
+      setLoading(false);
+    }
+
+    fetchPlaces();
+  }, []);
+
   const filtered: Place[] = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    return mock.filter((p) => {
+
+    return places.filter((p) => {
       const byQuery =
         !ql ||
         p.name.toLowerCase().includes(ql) ||
         p.address.toLowerCase().includes(ql);
+
       const byCat = selected.length === 0 || selected.includes(p.category);
-      const byOpen = !openOnly || p.openNow;
+      const byOpen = !openOnly || p.is_open_now;
+
       return byQuery && byCat && byOpen;
     });
-  }, [q, selected, openOnly]);
+  }, [places, q, selected, openOnly]);
 
   const toggleCat = (key: string) =>
     setSelected((prev) =>
@@ -39,9 +76,7 @@ export default function HomePage() {
     if (p.lat && p.lng) {
       setMapPoint({ lat: p.lat, lng: p.lng, label: p.name });
     } else {
-      console.warn(
-        "Для цього місця немає координат (lat/lng). Додайте їх у places.ts"
-      );
+      console.warn("Для цього місця немає координат.");
     }
   }
 
@@ -79,17 +114,25 @@ export default function HomePage() {
 
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {filtered.map((p) => (
-              <PlaceCard key={p.id} place={p} onShow={handleShowOnMap} />
-            ))}
-            {filtered.length === 0 && (
-              <div className="rounded-2xl border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
-                Нічого не знайдено. Спробуй змінити запит або категорії.
-              </div>
-            )}
-          </div>
+          {loading ? (
+            <div className="rounded-2xl border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
+              Завантаження місць...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {filtered.map((p) => (
+                <PlaceCard key={p.id} place={p} onShow={handleShowOnMap} />
+              ))}
+
+              {filtered.length === 0 && (
+                <div className="rounded-2xl border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
+                  Нічого не знайдено. Спробуй змінити запит або категорії.
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
         <aside className="lg:col-span-1">
           <OSMMap selected={mapPoint} />
         </aside>
