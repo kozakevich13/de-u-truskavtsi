@@ -30,10 +30,10 @@ export default function PlaceCard({
         <span
           className={
             "text-xs font-medium " +
-            (place.openNow ? "text-emerald-600" : "text-zinc-500")
+            (place.is_open_now ? "text-emerald-600" : "text-zinc-500")
           }
         >
-          {place.openNow ? "Відкрито зараз" : "Зачинено"}
+          {place.is_open_now ? "Відкрито зараз" : "Зачинено"}
         </span>
 
         <button
