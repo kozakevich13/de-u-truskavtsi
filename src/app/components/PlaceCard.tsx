@@ -12,7 +12,7 @@ export default function PlaceCard({
 }) {
   return (
     <article className="group rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/80">
-      <Link href={`/places/${place.id}`} className="block">
+      <Link href={`/${place.category}/${place.slug}`} className="block">
         <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
           {place.name}
         </h3>
