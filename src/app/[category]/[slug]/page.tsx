@@ -5,16 +5,17 @@ import PlaceMap from "../../components/PlaceMap";
 import { supabase } from "../../lib/supabase";
 
 type Params = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ category: string; slug: string }>;
 };
 
 export default async function PlacePage({ params }: Params) {
-  const { id } = await params;
+  const { category, slug } = await params;
 
   const { data: place, error } = await supabase
     .from("places")
     .select("*")
-    .eq("id", id)
+    .eq("category", category)
+    .eq("slug", slug)
     .single();
 
   if (error || !place) {
@@ -22,13 +23,13 @@ export default async function PlacePage({ params }: Params) {
   }
 
   const mainImage =
-  place.main_image ||
-  (Array.isArray(place.image_url) ? place.image_url[0] : "");
+    place.main_image ||
+    (Array.isArray(place.image_url) ? place.image_url[0] : "");
 
-const gallery =
-  Array.isArray(place.image_url) && place.image_url.length > 0
-    ? place.image_url.filter((img: string) => img !== mainImage)
-    : [];
+  const gallery =
+    Array.isArray(place.image_url) && place.image_url.length > 0
+      ? place.image_url.filter((img: string) => img !== mainImage)
+      : [];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -92,9 +93,7 @@ const gallery =
                 Рейтинг: <b>★ {place.rating.toFixed(1)}</b>
               </div>
             )}
-            <div>
-              Статус: {place.is_open_now ? "Відкрито" : "Зачинено"}
-            </div>
+            <div>Статус: {place.is_open_now ? "Відкрито" : "Зачинено"}</div>
           </div>
 
           {place.description && (

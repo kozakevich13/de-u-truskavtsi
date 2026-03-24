@@ -22,4 +22,5 @@ export interface Place {
   rating: number | null;
   is_open_now: boolean | null;
   created_at?: string;
+  slug: string;
 }

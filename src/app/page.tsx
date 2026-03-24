@@ -67,6 +67,13 @@ export default function HomePage() {
     });
   }, [places, q, selected, openOnly]);
 
+  const placesWithCategoryUrl = useMemo(() => {
+    return filtered.map((place) => ({
+      ...place,
+      href: `/${place.category}/${place.id}`,
+    }));
+  }, [filtered]);
+
   const toggleCat = (key: string) =>
     setSelected((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -120,11 +127,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {filtered.map((p) => (
+              {placesWithCategoryUrl.map((p) => (
                 <PlaceCard key={p.id} place={p} onShow={handleShowOnMap} />
               ))}
 
-              {filtered.length === 0 && (
+              {placesWithCategoryUrl.length === 0 && (
                 <div className="rounded-2xl border border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
                   Нічого не знайдено. Спробуй змінити запит або категорії.
                 </div>
