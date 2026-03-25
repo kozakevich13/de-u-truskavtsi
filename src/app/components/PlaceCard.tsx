@@ -3,6 +3,16 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Place } from "../types/place";
 
+// Словник для відображення назв категорій
+const categoryLabels: Record<string, string> = {
+  cafe: "Кав'ярня",
+  restaurant: "Ресторан",
+  shop: "Магазин",
+  hotel: "Готель",
+  park: "Парк",
+  mall: "ТЦ",
+};
+
 export default function PlaceCard({
   place,
   onShow,
@@ -13,11 +23,15 @@ export default function PlaceCard({
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
       
-      {/* Фото (Тепер просто декоративне, веде на сторінку закладу) */}
       <Link 
         href={`/${place.category}/${place.slug}`}
         className="relative h-44 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800"
       >
+        {/* ПЛАШКА КАТЕГОРІЇ */}
+        <div className="absolute left-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-900 shadow-sm backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100">
+          {categoryLabels[place.category] || place.category}
+        </div>
+
         {place.main_image ? (
           <Image
             src={place.main_image}
@@ -34,7 +48,6 @@ export default function PlaceCard({
         <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/5" />
       </Link>
 
-      {/* Контент (Перехід на сторінку) */}
       <Link 
         href={`/${place.category}/${place.slug}`} 
         className="flex-grow p-4 cursor-pointer"
@@ -54,7 +67,6 @@ export default function PlaceCard({
         </p>
       </Link>
 
-      {/* Футер з кнопкою "На мапі" */}
       <div className="flex items-center justify-between border-t border-zinc-50 p-3 dark:border-zinc-800/50">
         <div className="flex flex-col">
           <span className={`text-[10px] font-bold uppercase tracking-tight ${place.is_open_now ? "text-emerald-600" : "text-zinc-400"}`}>
