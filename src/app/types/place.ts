@@ -23,4 +23,5 @@ export interface Place {
   is_open_now: boolean | null;
   created_at?: string;
   slug: string;
+  main_image: string;
 }
