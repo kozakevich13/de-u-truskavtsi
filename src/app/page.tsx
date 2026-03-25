@@ -80,7 +80,7 @@ export default function HomePage() {
           Відкривай <span className="text-blue-600 dark:text-blue-400">Трускавець</span>
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-          Твій гід найкращими локаціями міста: від затишних кав'ярень до мальовничих парків.
+          Твій гід найкращими локаціями міста: від затишних кав&apos;ярень до мальовничих парків.
         </p>
       </header>
 

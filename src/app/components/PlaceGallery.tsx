@@ -13,7 +13,6 @@ export default function PlaceGallery({
   placeName: string; 
 }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const allImages = [mainImage, ...gallery].filter(Boolean);
 
   return (
     <>
