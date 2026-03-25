@@ -85,7 +85,7 @@ export default function HomePage() {
       </header>
 
       {/* Панель керування: Пошук + Чекбокс */}
-      <div className="sticky top-4 z-30 mb-8 flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm">
+      <div className="sticky top-4 z-[1100] mb-8 flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm">
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <SearchBar value={q} onChange={setQ} />
           
@@ -148,7 +148,7 @@ export default function HomePage() {
 
         {/* Карта */}
         <aside className="order-1 lg:order-2 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-40 h-fit">
-          <div className="h-[400px] lg:h-[600px] overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="h-[400px] overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
             <OSMMap selected={mapPoint} />
           </div>
         </aside>
