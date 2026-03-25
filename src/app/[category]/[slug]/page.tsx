@@ -9,7 +9,6 @@ type Params = {
   params: Promise<{ category: string; slug: string }>;
 };
 
-// --- ГЕНЕРАЦІЯ МЕТАДАНИХ ---
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { category, slug } = await params;
 
