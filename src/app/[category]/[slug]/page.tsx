@@ -1,3 +1,4 @@
+import { Metadata } from "next"; 
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,6 +10,48 @@ type Params = {
   params: Promise<{ category: string; slug: string }>;
 };
 
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { category, slug } = await params;
+
+  const { data: place } = await supabase
+    .from("places")
+    .select("name, description, main_image")
+    .eq("category", category)
+    .eq("slug", slug)
+    .single();
+
+  if (!place) return { title: "Місце не знайдено" };
+
+  const title = `${place.name} | Трускавець`;
+  const description = place.description || `Дізнайтесь більше про ${place.name} у Трускавці.`;
+  const imageUrl = place.main_image || ""; 
+
+  return {
+    title: title,
+    description: description,
+    openGraph: {
+      title: title,
+      description: description,
+      type: "website",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: place.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title,
+      description: description,
+      images: [imageUrl],
+    },
+  };
+}
+
+// --- ОСНОВНИЙ КОМПОНЕНТ СТОРІНКИ ---
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
