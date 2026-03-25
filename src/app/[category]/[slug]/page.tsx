@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PlaceMap from "../../components/PlaceMap";
+import PlaceGallery from "../../components/PlaceGallery";
 import { supabase } from "../../lib/supabase";
 
 type Params = {
@@ -32,91 +33,96 @@ export default async function PlacePage({ params }: Params) {
       : [];
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <Link
-        href="/"
-        className="text-sm text-blue-600 underline-offset-2 hover:underline"
-      >
-        ← На головну
-      </Link>
+    <main className="mx-auto max-w-6xl px-4 py-6">
+      {/* Оновлена кнопка "На головну" */}
+      <div className="mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-all hover:bg-zinc-50 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+          На головну
+        </Link>
+      </div>
 
-      <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-transparent shadow-sm">
-          {mainImage ? (
-            <Image
-              src={mainImage}
-              alt={place.name}
-              width={1600}
-              height={1000}
-              className="h-[320px] w-full object-cover md:h-[520px]"
-              priority
-            />
-          ) : (
-            <div className="flex h-[320px] w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 md:h-[520px]">
-              Фото відсутнє
-            </div>
-          )}
-        </div>
+      {/* Галерея з функцією розгортання фото */}
+      <PlaceGallery 
+        mainImage={mainImage} 
+        gallery={gallery} 
+        placeName={place.name} 
+      />
 
-        <div className="grid grid-cols-2 grid-rows-2 gap-3">
-          {gallery.slice(0, 4).map((url: string, i: number) => (
-            <div
-              key={i}
-              className="overflow-hidden rounded-2xl border border-transparent shadow-sm"
-            >
-              <Image
-                src={url}
-                alt={`${place.name} photo ${i + 1}`}
-                width={800}
-                height={600}
-                className="h-[155px] w-full object-cover md:h-[255px]"
-              />
-            </div>
-          ))}
-
-          {gallery.length === 0 && (
-            <div className="col-span-2 row-span-2 flex items-center justify-center rounded-2xl bg-zinc-100 text-sm text-zinc-500">
-              Галерея відсутня
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <section className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h1 className="text-2xl font-semibold">{place.name}</h1>
-          <p className="mt-1 text-sm text-zinc-600">{place.address}</p>
-
-          <div className="mt-4 grid gap-2 text-sm text-zinc-700">
-            {typeof place.rating === "number" && (
-              <div>
-                Рейтинг: <b>★ {place.rating.toFixed(1)}</b>
-              </div>
-            )}
-            <div>Статус: {place.is_open_now ? "Відкрито" : "Зачинено"}</div>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {place.name}
+            </h1>
+            <p className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              {place.address}
+            </p>
           </div>
 
+          <div className="mt-6 flex flex-wrap gap-4">
+            {typeof place.rating === "number" && (
+              <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-500">
+                ★ {place.rating.toFixed(1)}
+              </div>
+            )}
+            <div className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
+              place.is_open_now 
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-500" 
+                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+            }`}>
+              <span className={`h-2 w-2 rounded-full ${place.is_open_now ? "bg-emerald-500" : "bg-zinc-400"}`} />
+              {place.is_open_now ? "Відкрито" : "Зачинено"}
+            </div>
+          </div>
+
+          <hr className="my-8 border-zinc-200 dark:border-zinc-800" />
+
           {place.description && (
-            <p className="mt-4 text-sm leading-6 text-zinc-700">
-              {place.description}
-            </p>
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Про заклад</h2>
+              <p className="mt-3 text-base leading-7 text-zinc-700 dark:text-zinc-400">
+                {place.description}
+              </p>
+            </div>
           )}
         </div>
 
         <aside className="lg:col-span-1">
-          {place.lat && place.lng ? (
-            <PlaceMap
-              point={{
-                lat: place.lat,
-                lng: place.lng,
-                label: place.name,
-              }}
-            />
-          ) : (
-            <div className="flex h-80 items-center justify-center rounded-2xl border text-sm text-zinc-500">
-              Координати відсутні
-            </div>
-          )}
+          <div className="sticky top-8 space-y-4">
+            <h3 className="text-lg font-semibold dark:text-zinc-100">Розташування</h3>
+            {place.lat && place.lng ? (
+              <div className="h-80 overflow-hidden rounded-3xl border border-zinc-200 shadow-sm dark:border-zinc-800">
+                <PlaceMap
+                  point={{
+                    lat: place.lat,
+                    lng: place.lng,
+                    label: place.name,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex h-80 items-center justify-center rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
+                Координати відсутні
+              </div>
+            )}
+          </div>
         </aside>
       </section>
     </main>
