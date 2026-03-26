@@ -27,7 +27,6 @@ export default function PlaceCard({
         href={`/${place.category}/${place.slug}`}
         className="relative h-44 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800"
       >
-        {/* ПЛАШКА КАТЕГОРІЇ */}
         <div className="absolute left-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-900 shadow-sm backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100">
           {categoryLabels[place.category] || place.category}
         </div>
