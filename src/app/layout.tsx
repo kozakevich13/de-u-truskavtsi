@@ -1,25 +1,49 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next"; 
+import { Geist, Geist_Mono, Montserrat } from "next/font/google"; 
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
+
+const montserrat = Montserrat({
+  subsets: ["cyrillic", "cyrillic-ext", "latin"],
+  weight: ["400", "500", "600", "700", "800"], 
+  variable: "--font-montserrat", 
+  display: "swap", 
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" }, 
+  ],
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://detruckavtsi.info"),
   title: {
     default: "Трускавець: Карта закладів, кав'ярень та відпочинку",
     template: "%s | Відкривай Трускавець" 
   },
   description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи, фото та відгуками.",
   
+  robots: {
+    index: true,
+    follow: true,
+  },
+
   openGraph: {
     title: "Відкривай Трускавець — Твій путівник містом",
     description: "Всі цікаві локації Трускавця в одному місці: від кав'ярень до бюветів.",
@@ -29,10 +53,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-main.jpg",
+        url: "/og-main.png", 
         width: 1200,
         height: 630,
-        alt: "Карта Трускавця",
+        alt: "Карта закладів Трускавця",
       },
     ],
   },
@@ -44,11 +68,7 @@ export const metadata: Metadata = {
     images: ["/og-main.jpg"],
   },
 
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-32x32.png",
-    apple: "/apple-touch-icon.png",
-  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
@@ -59,7 +79,9 @@ export default function RootLayout({
   return (
     <html lang="uk"> 
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning={true}
+        className={`${montserrat.className} ${geistSans.variable} ${geistMono.variable} antialiased`} 
+        // suppressHydrationWarning залишаємо, якщо є проблеми з темною темою
+        suppressHydrationWarning={true}
       >
         {children}
         <Analytics />
