@@ -5,6 +5,7 @@ import PlaceMap from "../../components/PlaceMap";
 import PlaceGallery from "../../components/PlaceGallery";
 import { supabase } from "../../lib/supabase";
 import PlaceMedia from "../../components/PlaceMedia";
+import ExpandableDescription from "../../components/ExpandableDescription";
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
@@ -157,12 +158,10 @@ export default async function PlacePage({ params }: Params) {
           <hr className="my-8 border-zinc-200 dark:border-zinc-800" />
 
           {place.description && (
-            <section>
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Про заклад {place.name}</h2>
-              <div className="mt-3 text-base leading-7 text-zinc-700 dark:text-zinc-400">
-                {place.description}
-              </div>
-            </section>
+            <ExpandableDescription 
+              description={place.description} 
+              title={place.name} 
+            />
           )}
           <PlaceMedia media={place.places_media} />
         </article>
