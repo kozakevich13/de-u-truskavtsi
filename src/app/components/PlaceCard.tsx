@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Place } from "../types/place";
 
-// Словник для відображення назв категорій
 const categoryLabels: Record<string, string> = {
   cafe: "Кав'ярня",
   restaurant: "Ресторан",
@@ -11,6 +10,8 @@ const categoryLabels: Record<string, string> = {
   hotel: "Готель",
   park: "Парк",
   mall: "ТЦ",
+  sanatorium: "Санаторій",
+  cinema: "Кінотеатр"
 };
 
 export default function PlaceCard({
