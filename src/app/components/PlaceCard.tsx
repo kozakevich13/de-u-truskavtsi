@@ -11,7 +11,10 @@ const categoryLabels: Record<string, string> = {
   park: "Парк",
   mall: "ТЦ",
   sanatorium: "Санаторій",
-  cinema: "Кінотеатр"
+  cinema: "Кінотеатр",
+  byuvet: "Бювет",
+  museums: "Музей",
+  entertainment: "Розваги"
 };
 
 export default function PlaceCard({
