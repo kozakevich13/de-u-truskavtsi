@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import PlaceMap from "../../components/PlaceMap";
 import PlaceGallery from "../../components/PlaceGallery";
 import { supabase } from "../../lib/supabase";
+import PlaceMedia from "../../components/PlaceMedia";
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
@@ -163,6 +164,7 @@ export default async function PlacePage({ params }: Params) {
               </div>
             </section>
           )}
+          <PlaceMedia media={place.places_media} />
         </article>
 
         <aside className="lg:col-span-1">
