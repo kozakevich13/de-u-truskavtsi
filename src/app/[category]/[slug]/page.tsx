@@ -13,22 +13,24 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { category, slug } = await params;
 
   const { data: place } = await supabase
-  .from("places")
-  .select("name, description, main_image, category, slug, address") 
-  .eq("category", category)
-  .eq("slug", slug)
-  .single();
+    .from("places")
+    .select("name, description, main_image, category, slug, address, keywords") 
+    .eq("category", category)
+    .eq("slug", slug)
+    .single();
 
   if (!place) return { title: "Місце не знайдено" };
 
   const title = `${place.name} | Трускавець — Ціни, фото, адреса`;
-  const description = place.description?.slice(0, 160) || `Відвідайте ${place.name} у Трускавці. Адреса: ${place.address}. Перегляньте відгуки, фото та розташування на карті.`;
+  const description = place.description?.slice(0, 160) || `Відвідайте ${place.name} у Трускавці.`;
   const imageUrl = place.main_image || "";
   const url = `https://detruckavtsi.info/${place.category}/${place.slug}`;
 
+  const keywordsArray = place.keywords ? place.keywords.split(",").map((s: string) => s.trim()) : [];
   return {
     title,
     description,
+    keywords: keywordsArray,
     alternates: {
       canonical: url,
     },
@@ -38,14 +40,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       url,
       type: "website",
       siteName: "Відкривай Трускавець",
-      images: [
-        {
-          url: imageUrl,
-          width: 1200,
-          height: 630,
-          alt: place.name,
-        },
-      ],
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: place.name }],
     },
     twitter: {
       card: "summary_large_image",
@@ -56,7 +51,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-// --- ОСНОВНИЙ КОМПОНЕНТ СТОРІНКИ ---
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
@@ -80,7 +74,6 @@ export default async function PlacePage({ params }: Params) {
       ? place.image_url.filter((img: string) => img !== mainImage)
       : [];
 
-  // Структуровані дані JSON-LD для Google
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -105,13 +98,12 @@ export default async function PlacePage({ params }: Params) {
       "ratingValue": place.rating,
       "bestRating": "5",
       "worstRating": "1",
-      "ratingCount": "12" // Можна замінити на реальну кількість відгуків
+      "ratingCount": "12" 
     } : undefined
   };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
-      {/* Впровадження JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
