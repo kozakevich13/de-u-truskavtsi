@@ -6,6 +6,7 @@ import PlaceGallery from "../../components/PlaceGallery";
 import { supabase } from "../../lib/supabase";
 import PlaceMedia from "../../components/PlaceMedia";
 import ExpandableDescription from "../../components/ExpandableDescription";
+import RecommendedPlaces from "../../components/RecommendedPlaces";
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const url = `https://detruckavtsi.info/${place.category}/${place.slug}`;
 
   const keywordsArray = place.keywords ? place.keywords.split(",").map((s: string) => s.trim()) : [];
+  
   return {
     title,
     description,
@@ -56,6 +58,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
+  // 1. Отримуємо основні дані про заклад
   const { data: place, error } = await supabase
     .from("places")
     .select("*")
@@ -66,6 +69,16 @@ export default async function PlacePage({ params }: Params) {
   if (error || !place) {
     return notFound();
   }
+
+  const { data: recommended } = await supabase
+    .from("places")
+    .select("id, name, main_image, category, slug, address, rating")
+    .eq("category", category)
+    .neq("slug", slug) 
+    .limit(3)
+    .order("rating", { ascending: false });
+
+  const initialRecommended = recommended ?? [];
 
   const mainImage =
     place.main_image ||
@@ -163,7 +176,21 @@ export default async function PlacePage({ params }: Params) {
               title={place.name} 
             />
           )}
+
           <PlaceMedia media={place.places_media} />
+
+          {place.keywords && (
+            <div className="mt-10 flex flex-wrap gap-2">
+              {place.keywords.split(",").map((word: string) => (
+                <span 
+                  key={word} 
+                  className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                >
+                  #{word.trim()}
+                </span>
+              ))}
+            </div>
+          )}
         </article>
 
         <aside className="lg:col-span-1">
@@ -187,6 +214,11 @@ export default async function PlacePage({ params }: Params) {
           </div>
         </aside>
       </section>
+
+      <RecommendedPlaces 
+        places={initialRecommended} 
+        currentCategory={category} 
+      />
     </main>
   );
 }
