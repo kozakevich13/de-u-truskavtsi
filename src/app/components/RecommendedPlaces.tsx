@@ -2,26 +2,19 @@ import Link from "next/link";
 import Image from "next/image";
 
 interface Place {
-  id: number;
-  created_at: string;
+  id: number | string;
   name: string;
   category: string;
-  address: string | null;
-  description: string | null;
-  image_url: string[] | null;
-  lat: number | null;
-  lng: number | null;
-  rating: number | null;
-  is_open_now: boolean | null;
-  main_image: string | null;
   slug: string;
-  short_description: string | null;
-  places_media: any | null; 
-  keywords: string | null;
+  main_image?: string | null;
+  address?: string | null;
+  rating?: number | null;
+  // Інші поля нам тут не критичні для рендеру картки, 
+  // тому ми їх не прописуємо як обов'язкові
 }
 
 interface RecommendedPlacesProps {
-  places: Place[];
+  places: Place[]; 
   currentCategory: string;
 }
 
@@ -61,11 +54,11 @@ export default function RecommendedPlaces({ places }: RecommendedPlacesProps) {
                 <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                   {place.category}
                 </span>
-                {place.rating !== null && (
+                {/* {place.rating !== null && (
                   <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
                     ★ {place.rating.toFixed(1)}
                   </span>
-                )}
+                )} */}
               </div>
             </div>
           </Link>
