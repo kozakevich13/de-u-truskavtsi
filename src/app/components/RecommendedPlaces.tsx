@@ -1,12 +1,31 @@
 import Link from "next/link";
 import Image from "next/image";
 
+interface Place {
+  id: number;
+  created_at: string;
+  name: string;
+  category: string;
+  address: string | null;
+  description: string | null;
+  image_url: string[] | null;
+  lat: number | null;
+  lng: number | null;
+  rating: number | null;
+  is_open_now: boolean | null;
+  main_image: string | null;
+  slug: string;
+  short_description: string | null;
+  places_media: any | null; 
+  keywords: string | null;
+}
+
 interface RecommendedPlacesProps {
-  places: any[];
+  places: Place[];
   currentCategory: string;
 }
 
-export default function RecommendedPlaces({ places, currentCategory }: RecommendedPlacesProps) {
+export default function RecommendedPlaces({ places }: RecommendedPlacesProps) {
   if (places.length === 0) return null;
 
   return (
@@ -23,7 +42,7 @@ export default function RecommendedPlaces({ places, currentCategory }: Recommend
           >
             <div className="relative h-48 w-full overflow-hidden">
               <Image
-                src={place.main_image || "/placeholder.jpg"}
+                src={place.main_image?.trim() || "/placeholder.jpg"}
                 alt={place.name}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -33,14 +52,16 @@ export default function RecommendedPlaces({ places, currentCategory }: Recommend
               <h3 className="font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 transition-colors">
                 {place.name}
               </h3>
-              <p className="mt-1 text-sm text-zinc-500 line-clamp-1">
-                {place.address}
-              </p>
+              {place.address && (
+                <p className="mt-1 text-sm text-zinc-500 line-clamp-1">
+                  {place.address}
+                </p>
+              )}
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                   {place.category}
                 </span>
-                {place.rating && (
+                {place.rating !== null && (
                   <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
                     ★ {place.rating.toFixed(1)}
                   </span>
