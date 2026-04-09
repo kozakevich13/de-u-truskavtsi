@@ -24,7 +24,7 @@ export default function PlaceGallery({
           {mainImage ? (
             <Image
               src={mainImage}
-              alt={placeName}
+              alt={`Головне фото закладу ${placeName} у Трускавці`}
               width={1600}
               height={1000}
               className="h-[320px] w-full object-cover md:h-[520px]"
@@ -47,7 +47,7 @@ export default function PlaceGallery({
               >
                 <Image
                   src={url}
-                  alt={`${placeName} photo ${i + 1}`}
+                  alt={`Інтер'єр та деталі закладу ${placeName}, фото ${i + 1}`}
                   width={800}
                   height={600}
                   className="h-[155px] w-full object-cover md:h-[255px]"
@@ -76,7 +76,7 @@ export default function PlaceGallery({
           <div className="relative h-full w-full max-w-5xl">
             <Image
               src={selectedImage}
-              alt="Full size"
+              alt={`${placeName} Трускавець - повний розмір`}
               fill
               className="object-contain"
               quality={100}
