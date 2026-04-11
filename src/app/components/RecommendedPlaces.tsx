@@ -1,17 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-
-interface Place {
-  id: number | string;
-  name: string;
-  category: string;
-  slug: string;
-  main_image?: string | null;
-  address?: string | null;
-  rating?: number | null;
-  // Інші поля нам тут не критичні для рендеру картки, 
-  // тому ми їх не прописуємо як обов'язкові
-}
+import { Place } from "../types/place";
 
 interface RecommendedPlacesProps {
   places: Place[]; 

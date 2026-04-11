@@ -7,9 +7,36 @@ import { supabase } from "../../lib/supabase";
 import PlaceMedia from "../../components/PlaceMedia";
 import ExpandableDescription from "../../components/ExpandableDescription";
 import RecommendedPlaces from "../../components/RecommendedPlaces";
+import { Place } from "../../types/place"
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
+};
+
+// Словник для перекладу категорій у хлібних крихтах
+const categoryNames: Record<string, string> = {
+  cafe: "Кав'ярні",
+  restaurant: "Ресторани",
+  hotel: "Готелі",
+  shop: "Шопінг",
+  sanatorium: "Санаторії",
+  museums: "Музеї",
+  cinema: "Кінотеатри",
+  byuvet: "Бювети",
+  mall: "ТЦ"
+};
+
+// Словник для мапінгу URL-категорій (множина -> однина для лінків)
+const categoryUrlMapping: Record<string, string> = {
+  cafe: "cafes",
+  restaurant: "restaurants",
+  hotel: "hotels",
+  shop: "shops",
+  sanatorium: "sanatoriums",
+  museums: "museums",
+  cinema: "cinemas",
+  byuvet: "byuvets",
+  mall: "malls"
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -58,7 +85,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
-  // 1. Отримуємо основні дані про заклад
   const { data: place, error } = await supabase
     .from("places")
     .select("*")
@@ -78,7 +104,9 @@ export default async function PlacePage({ params }: Params) {
     .limit(3)
     .order("rating", { ascending: false });
 
-  const initialRecommended = recommended ?? [];
+    const initialRecommended = (recommended as Place[]) ?? [];
+  const categoryLabel = categoryNames[category] || category;
+  const categorySlug = categoryUrlMapping[category] || category;
 
   const mainImage =
     place.main_image ||
@@ -124,15 +152,26 @@ export default async function PlacePage({ params }: Params) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-all hover:bg-zinc-50 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      {/* Оновлена навігація (Хлібні крихти) */}
+      <nav className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
+        <Link 
+          href="/" 
+          className="transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          На головну
+          Головна
         </Link>
-      </div>
+        <span className="mx-2">/</span>
+        <Link 
+          href={`/${categorySlug}`} 
+          className="transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+        >
+          {categoryLabel}
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="font-medium text-zinc-900 dark:text-zinc-200">
+          {place.name}
+        </span>
+      </nav>
 
       <PlaceGallery 
         mainImage={mainImage} 
@@ -143,7 +182,7 @@ export default async function PlacePage({ params }: Params) {
       <section className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <article className="lg:col-span-2">
           <header className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 lg:text-4xl">
               {place.name}
             </h1>
             <p className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">

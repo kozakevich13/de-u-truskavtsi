@@ -7,6 +7,7 @@ import PlaceCard from "./PlaceCard";
 import type { Place } from "../types/place";
 import { SelectedPoint } from "./OSMMap";
 import dynamic from "next/dynamic";
+import Link from "next/link"; // 1. Додаємо імпорт Link
 
 const OSMMap = dynamic(() => import("./OSMMap"), { 
   ssr: false,
@@ -39,7 +40,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
     { key: "restaurant", label: "Ресторани" },
     { key: "shop", label: "Магазини" },
     { key: "hotel", label: "Готелі" },
-    { key: "park", label: "Парки" },
+    { key: "sanatorium", label: "Санаторії" },
     { key: "mall", label: "ТЦ" },
   ];
 
@@ -94,7 +95,6 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
       </div>
 
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Список місць - ЗАВЖДИ РЕНДЕРИТЬСЯ ДЛЯ SEO */}
         <section className={`${viewMode === "map" ? "hidden" : "block"} lg:block lg:col-span-7 xl:col-span-8`}>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             Знайдено: {filtered.length}
@@ -110,32 +110,52 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
           </div>
         </section>
 
-        {/* Карта - ТІЛЬКИ ПІСЛЯ МОНТУВАННЯ */}
         <aside className={`
           ${viewMode === "list" ? "hidden lg:block" : "fixed inset-0 z-[1500] bg-white dark:bg-zinc-950"} 
-          lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-40 lg:h-[400px]
+          lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-40
         `}>
-          <div className="relative h-full w-full lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
-            
-            {viewMode === "map" && (
-              <button 
-                onClick={() => setViewMode("list")}
-                className="absolute right-5 top-5 z-[1600] flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl dark:bg-zinc-800 dark:text-white lg:hidden"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                </svg>
-              </button>
-            )}
-
-            {isMounted ? (
+          <div className="relative h-[400px] w-full lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
+            {isMounted && (
               <OSMMap selected={mapPoint} />
-            ) : (
-              <div className="h-full w-full bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-3xl" />
             )}
           </div>
         </aside>
       </div>
+
+      {/* НОВИЙ БЛОК: Популярні категорії (SEO-перелінковка) */}
+      <section className="mt-24 border-t border-zinc-200 pt-16 dark:border-zinc-800">
+        <h2 className="mb-10 text-2xl font-bold text-zinc-900 dark:text-zinc-100 lg:text-3xl text-center md:text-left">
+          Досліджуйте Трускавець за категоріями
+        </h2>
+        
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {categories.map((cat) => (
+            <Link // 2. Замінюємо <a> на <Link>
+              key={cat.key}
+              href={`/${cat.key === 'cafe' ? 'cafes' : 
+                      cat.key === 'restaurant' ? 'restaurants' : 
+                      cat.key === 'hotel' ? 'hotels' : 
+                      cat.key === 'shop' ? 'shops' : 
+                      cat.key === 'mall' ? 'malls' : 
+                      cat.key === 'sanatorium' ? 'sanatoriums' : cat.key + 's'}`}
+              className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400"
+            >
+              <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">
+                {cat.label}
+              </span>
+            </Link>
+          ))}
+          
+          {/* 3. Додаткові посилання теж через <Link> */}
+          <Link href="/museums" className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400">
+            <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">Музеї</span>
+          </Link>
+          
+          <Link href="/byuvets" className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400">
+            <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">Бювети</span>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
