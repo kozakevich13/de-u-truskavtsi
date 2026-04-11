@@ -38,7 +38,9 @@ export const metadata: Metadata = {
     template: "%s | Відкривай Трускавець" 
   },
   description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи, фото та відгуками.",
-  
+  verification: {
+    google: '1rZgcAprm3LxHURfV6gzN4bEN4e2yh0SzHmcqDaqZUg',
+  },
   robots: {
     index: true,
     follow: true,
