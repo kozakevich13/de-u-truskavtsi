@@ -26,7 +26,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
   }, []);
 
   useEffect(() => {
-    if (viewMode === "map" && window.innerWidth < 1024) {
+    if (viewMode === "map" && typeof window !== 'undefined' && window.innerWidth < 1024) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -46,7 +46,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return initialPlaces.filter((p) => {
-      const byQuery = !ql || p.name.toLowerCase().includes(ql) || p.address.toLowerCase().includes(ql);
+      const byQuery = !ql || p.name.toLowerCase().includes(ql) || (p.address && p.address.toLowerCase().includes(ql));
       const byCat = selected.length === 0 || selected.includes(p.category);
       const byOpen = !openOnly || p.is_open_now;
       return byQuery && byCat && byOpen;
@@ -70,11 +70,9 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
     }
   };
 
-  if (!isMounted) return null;
-
   return (
     <div className="relative min-h-screen">
-
+      {/* Секція фільтрів */}
       <div className={`${viewMode === "map" ? "hidden" : "flex"} sticky top-4 z-[1100] mb-8 flex-col gap-4 rounded-3xl border border-zinc-200 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm lg:flex`}>
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <SearchBar value={q} onChange={setQ} />
@@ -96,6 +94,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
       </div>
 
       <div className="grid gap-8 lg:grid-cols-12">
+        {/* Список місць - ЗАВЖДИ РЕНДЕРИТЬСЯ ДЛЯ SEO */}
         <section className={`${viewMode === "map" ? "hidden" : "block"} lg:block lg:col-span-7 xl:col-span-8`}>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             Знайдено: {filtered.length}
@@ -111,6 +110,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
           </div>
         </section>
 
+        {/* Карта - ТІЛЬКИ ПІСЛЯ МОНТУВАННЯ */}
         <aside className={`
           ${viewMode === "list" ? "hidden lg:block" : "fixed inset-0 z-[1500] bg-white dark:bg-zinc-950"} 
           lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-40 lg:h-[400px]
@@ -128,8 +128,10 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
               </button>
             )}
 
-            {isMounted && (
+            {isMounted ? (
               <OSMMap selected={mapPoint} />
+            ) : (
+              <div className="h-full w-full bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-3xl" />
             )}
           </div>
         </aside>
