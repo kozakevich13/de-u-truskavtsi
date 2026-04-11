@@ -38,6 +38,12 @@ export const metadata: Metadata = {
     template: "%s | Відкривай Трускавець" 
   },
   description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи, фото та відгуками.",
+  
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+
   verification: {
     google: '1rZgcAprm3LxHURfV6gzN4bEN4e2yh0SzHmcqDaqZUg',
   },
@@ -82,7 +88,6 @@ export default function RootLayout({
     <html lang="uk"> 
       <body
         className={`${montserrat.className} ${geistSans.variable} ${geistMono.variable} antialiased`} 
-        // suppressHydrationWarning залишаємо, якщо є проблеми з темною темою
         suppressHydrationWarning={true}
       >
         {children}
