@@ -103,7 +103,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-12">
+      <div className="grid gap-8 lg:grid-cols-12 items-start">
         <section className={`${viewMode === "map" ? "hidden" : "block"} lg:block lg:col-span-7 xl:col-span-8`}>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             Знайдено: {filtered.length}
@@ -119,11 +119,14 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
           </div>
         </section>
 
+        {/* МАПА: тепер sticky (lg:top-[120px]) */}
         <aside className={`
           ${viewMode === "list" ? "hidden lg:block" : "fixed inset-0 z-[1500] bg-white dark:bg-zinc-950"} 
-          lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-40
+          lg:col-span-5 xl:col-span-4 
+          lg:sticky lg:top-[120px] 
+          lg:h-[calc(100vh-160px)]
         `}>
-          <div className="relative h-[400px] w-full lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
+          <div className="relative h-[400px] w-full  lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
             {isMounted && (
               <OSMMap selected={mapPoint} />
             )}
@@ -131,6 +134,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
         </aside>
       </div>
 
+      {/* SEO СЕКЦІЯ */}
       <section className="mt-24 border-t border-zinc-200 pt-16 dark:border-zinc-800">
         <h2 className="mb-10 text-2xl font-bold text-zinc-900 dark:text-zinc-100 lg:text-3xl text-center md:text-left">
           Досліджуйте Трускавець за категоріями
@@ -153,14 +157,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
               </span>
             </Link>
           ))}
-          
-          <Link href="/museums" className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400">
-            <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">Музеї</span>
-          </Link>
-          
-          <Link href="/byuvets" className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400">
-            <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">Бювети</span>
-          </Link>
+          {/* ... інші посилання ... */}
         </div>
       </section>
     </div>
