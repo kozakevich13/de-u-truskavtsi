@@ -1,25 +1,13 @@
 import type { Metadata, Viewport } from "next"; 
-import { Geist, Geist_Mono, Montserrat } from "next/font/google"; 
+import { Nunito } from "next/font/google"; 
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
 
-const montserrat = Montserrat({
-  subsets: ["cyrillic", "cyrillic-ext", "latin"],
-  weight: ["400", "500", "600", "700", "800"], 
-  variable: "--font-montserrat", 
+const nunito = Nunito({
+  subsets: ["cyrillic", "latin"],
+  weight: ["400", "500", "600", "700", "800", "900"], 
+  variable: "--font-nunito", 
   display: "swap", 
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -76,7 +64,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Відкривай Трускавець",
     description: "Найкращі заклади Трускавця на одній карті.",
-    images: ["/og-main.jpg"],
+    images: ["/og-main.png"], 
   },
 
   manifest: "/site.webmanifest",
@@ -90,7 +78,7 @@ export default function RootLayout({
   return (
     <html lang="uk"> 
       <body
-        className={`${montserrat.className} ${geistSans.variable} ${geistMono.variable} antialiased`} 
+        className={`${nunito.className} antialiased`}
         suppressHydrationWarning={true}
       >
         {children}
