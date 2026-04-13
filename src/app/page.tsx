@@ -55,7 +55,7 @@ export default async function HomePage() {
         <div className="flex items-center gap-4">
           <div className="relative h-16 w-16 overflow-hidden md:h-20 md:w-20">
             <Image
-              src="/goose-logo.png"
+              src="/icon.png"
               alt="Логотип Відкривай Трускавець"
               fill
               className="object-contain" 

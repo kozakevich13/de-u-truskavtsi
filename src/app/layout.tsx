@@ -40,7 +40,10 @@ export const metadata: Metadata = {
   description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи, фото та відгуками.",
   
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/icon.png',
     apple: '/apple-touch-icon.png',
   },
 

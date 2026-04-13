@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const title = `${place.name} | Трускавець — Ціни, фото, адреса`;
   const description = place.description?.slice(0, 160) || `Відвідайте ${place.name} у Трускавці.`;
-  const imageUrl = place.main_image || "";
+  const imageUrl = place.main_image?.trim() || "";
   const url = `https://detruckavtsi.info/${place.category}/${place.slug}`;
 
   const keywordsArray = place.keywords ? place.keywords.split(",").map((s: string) => s.trim()) : [];
