@@ -7,7 +7,7 @@ import PlaceCard from "./PlaceCard";
 import type { Place } from "../types/place";
 import { SelectedPoint } from "./OSMMap";
 import dynamic from "next/dynamic";
-import Link from "next/link"; // 1. Додаємо імпорт Link
+import Link from "next/link"; 
 
 const OSMMap = dynamic(() => import("./OSMMap"), { 
   ssr: false,
@@ -73,12 +73,20 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
 
   return (
     <div className="relative min-h-screen">
-      {/* Секція фільтрів */}
-      <div className={`${viewMode === "map" ? "hidden" : "flex"} sticky top-4 z-[1100] mb-8 flex-col gap-4 rounded-3xl border border-zinc-200 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm lg:flex`}>
-        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+      <div className={`${viewMode === "map" ? "hidden" : "flex"} sticky top-4 z-[1100] mb-8 flex-wrap items-center gap-3 rounded-3xl border border-zinc-200 bg-white/70 p-3 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm lg:flex`}>
+        
+        <div className="w-full md:flex-grow md:w-auto">
           <SearchBar value={q} onChange={setQ} />
-          <div className="flex items-center gap-3 px-2">
-            <div className="relative inline-flex h-6 w-11 items-center">
+        </div>
+
+        <div className="flex w-full items-center gap-2 md:w-auto md:ml-auto">
+          
+          <div className="w-1/2 md:w-auto">
+            <CategoryFilter items={categories} selected={selected} onToggle={toggleCat} />
+          </div>
+
+          <div className="flex w-1/2 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white/50 py-2 dark:border-zinc-800 dark:bg-zinc-900/50 md:w-auto md:border-none md:bg-transparent md:py-0 md:justify-end">
+            <div className="relative inline-flex h-6 w-11 items-center flex-shrink-0">
               <input
                 id="open-only"
                 type="checkbox"
@@ -88,10 +96,11 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
               />
               <span className="pointer-events-none absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
             </div>
-            <label htmlFor="open-only" className="cursor-pointer text-sm font-medium text-zinc-700 dark:text-zinc-300">Тільки відкрито</label>
+            <label htmlFor="open-only" className="cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap sm:text-sm">
+              Відкрито
+            </label>
           </div>
         </div>
-        <CategoryFilter items={categories} selected={selected} onToggle={toggleCat} />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-12">
@@ -122,7 +131,6 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
         </aside>
       </div>
 
-      {/* НОВИЙ БЛОК: Популярні категорії (SEO-перелінковка) */}
       <section className="mt-24 border-t border-zinc-200 pt-16 dark:border-zinc-800">
         <h2 className="mb-10 text-2xl font-bold text-zinc-900 dark:text-zinc-100 lg:text-3xl text-center md:text-left">
           Досліджуйте Трускавець за категоріями
@@ -130,7 +138,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
         
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {categories.map((cat) => (
-            <Link // 2. Замінюємо <a> на <Link>
+            <Link 
               key={cat.key}
               href={`/${cat.key === 'cafe' ? 'cafes' : 
                       cat.key === 'restaurant' ? 'restaurants' : 
@@ -146,7 +154,6 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
             </Link>
           ))}
           
-          {/* 3. Додаткові посилання теж через <Link> */}
           <Link href="/museums" className="group flex flex-col items-center justify-center rounded-[2rem] border border-zinc-200 bg-white p-6 text-center transition-all hover:border-blue-500 hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-blue-400">
             <span className="text-base font-bold text-zinc-900 group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">Музеї</span>
           </Link>

@@ -12,17 +12,15 @@ export default function PlaceGallery({
   gallery: string[]; 
   placeName: string; 
 }) {
-  // Зберігаємо індекс вибраного фото замість URL, щоб легше було гортати
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
 
-  // Створюємо загальний масив усіх фото (головне + галерея)
   const allImages = [mainImage, ...gallery].filter(Boolean);
 
   const openModal = (index: number) => setCurrentIndex(index);
   const closeModal = () => setCurrentIndex(null);
 
   const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation(); // щоб не закрити модалку
+    e.stopPropagation(); 
     if (currentIndex !== null) {
       setCurrentIndex((currentIndex + 1) % allImages.length);
     }
@@ -38,7 +36,6 @@ export default function PlaceGallery({
   return (
     <>
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-        {/* Головне фото */}
         <div 
           className="cursor-pointer overflow-hidden rounded-2xl border border-transparent shadow-sm transition hover:opacity-95"
           onClick={() => openModal(0)}
@@ -59,7 +56,6 @@ export default function PlaceGallery({
           )}
         </div>
 
-        {/* Плитка галереї */}
         <div className="grid grid-cols-2 grid-rows-2 gap-3">
           {gallery.length > 0 ? (
             gallery.slice(0, 4).map((url: string, i: number) => {
@@ -78,7 +74,6 @@ export default function PlaceGallery({
                     className="h-[155px] w-full object-cover md:h-[255px]"
                   />
                   
-                  {/* Оверлей "Ще фото", якщо їх більше 4 */}
                   {isLastVisible && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white transition group-hover:bg-black/40">
                       <span className="text-lg font-bold md:text-2xl">
@@ -97,7 +92,6 @@ export default function PlaceGallery({
         </div>
       </section>
 
-      {/* Модальне вікно (Lightbox) */}
       {currentIndex !== null && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md"
@@ -110,7 +104,6 @@ export default function PlaceGallery({
             ×
           </button>
 
-          {/* Кнопка Назад */}
           {allImages.length > 1 && (
             <button 
               className="absolute left-4 z-50 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20 md:left-10"
@@ -130,7 +123,6 @@ export default function PlaceGallery({
             />
           </div>
 
-          {/* Кнопка Вперед */}
           {allImages.length > 1 && (
             <button 
               className="absolute right-4 z-50 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20 md:right-10"
@@ -140,7 +132,6 @@ export default function PlaceGallery({
             </button>
           )}
 
-          {/* Лічильник фото */}
           <div className="absolute bottom-8 text-sm font-medium text-white/70">
             {currentIndex + 1} / {allImages.length}
           </div>

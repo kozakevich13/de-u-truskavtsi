@@ -1,4 +1,3 @@
-// src/components/SearchBar.tsx
 "use client";
 import { useId } from "react";
 
