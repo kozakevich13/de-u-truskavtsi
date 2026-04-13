@@ -37,7 +37,7 @@ export default function PlaceCard({
 
         {place.main_image ? (
           <Image
-            src={place.main_image}
+            src={place.main_image.trim()}
             alt={place.name}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"
