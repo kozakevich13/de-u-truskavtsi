@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import SearchBar from "./SearchBar";
 import CategoryFilter from "./CategoryFilter";
 import PlaceCard from "./PlaceCard";
@@ -22,15 +22,39 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [isMounted, setIsMounted] = useState(false);
 
+  // Реф для збереження позиції скролу
+  const scrollPosRef = useRef(0);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Функція відкриття карти із записом скролу
+  const openMapMode = () => {
+    if (typeof window !== 'undefined') {
+      scrollPosRef.current = window.scrollY;
+    }
+    setViewMode("map");
+  };
+
+  // Логіка блокування скролу та відновлення позиції
   useEffect(() => {
-    if (viewMode === "map" && typeof window !== 'undefined' && window.innerWidth < 1024) {
-      document.body.style.overflow = "hidden";
+    if (viewMode === "map") {
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        document.body.style.overflow = "hidden";
+      }
     } else {
       document.body.style.overflow = "unset";
+      
+      // Повертаємо користувача на те саме місце
+      if (scrollPosRef.current !== 0) {
+        setTimeout(() => {
+          window.scrollTo({
+            top: scrollPosRef.current,
+            behavior: 'instant'
+          });
+        }, 10);
+      }
     }
     return () => { document.body.style.overflow = "unset"; };
   }, [viewMode]);
@@ -66,21 +90,23 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
       });
       
       if (window.innerWidth < 1024) {
-        setViewMode("map");
+        openMapMode();
       } 
     }
   };
 
   return (
     <div className="relative min-h-screen">
-      <div className={`${viewMode === "map" ? "hidden" : "flex"} sticky top-4 z-[1100] mb-8 flex-wrap items-center gap-3 rounded-3xl border border-zinc-200 bg-white/70 p-3 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 shadow-sm lg:flex`}>
-        
+      {/* ПАНЕЛЬ ФІЛЬТРІВ: прилипає до самого верху (top-0) */}
+      <div className={`
+        ${viewMode === "map" ? "hidden" : "flex"} 
+        sticky top-0 z-[1100] mb-8 w-full flex-wrap items-center gap-3 border-b border-zinc-200 bg-white/80 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 shadow-sm lg:flex
+      `}>
         <div className="w-full md:flex-grow md:w-auto">
           <SearchBar value={q} onChange={setQ} />
         </div>
 
         <div className="flex w-full items-center gap-2 md:w-auto md:ml-auto">
-          
           <div className="w-1/2 md:w-auto">
             <CategoryFilter items={categories} selected={selected} onToggle={toggleCat} />
           </div>
@@ -103,8 +129,12 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-12 items-start">
-        <section className={`${viewMode === "map" ? "hidden" : "block"} lg:block lg:col-span-7 xl:col-span-8`}>
+      <div className="grid gap-8 lg:grid-cols-12 items-start px-4">
+        {/* СЕКЦІЯ СПИСКУ: не видаляється з DOM для збереження скролу */}
+        <section className={`
+          lg:block lg:col-span-7 xl:col-span-8
+          ${viewMode === "map" ? "invisible h-0 overflow-hidden" : "block relative"}
+        `}>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             Знайдено: {filtered.length}
           </h2>
@@ -119,23 +149,37 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
           </div>
         </section>
 
-        {/* МАПА: тепер sticky (lg:top-[120px]) */}
+        {/* МАПА: fixed inset-0 на мобайлі для повного екрану */}
         <aside className={`
           ${viewMode === "list" ? "hidden lg:block" : "fixed inset-0 z-[1500] bg-white dark:bg-zinc-950"} 
-          lg:col-span-5 xl:col-span-4 
-          lg:sticky lg:top-[120px] 
-          lg:h-[calc(100vh-160px)]
+          lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-[100px] lg:h-[calc(100vh-120px)]
         `}>
-          <div className="relative h-[400px] w-full  lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
+          <div className="relative h-full w-full lg:overflow-hidden lg:rounded-3xl lg:border lg:border-zinc-200 lg:shadow-xl lg:dark:border-zinc-800">
+            
+            {/* Хрестик для виходу з мапи на мобайлі (праворуч вгорі) */}
+            {viewMode === "map" && (
+              <button 
+                onClick={() => setViewMode("list")}
+                className="absolute right-4 top-4 z-[2000] flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white/90 shadow-2xl text-zinc-900 backdrop-blur-md active:scale-90 transition-all lg:hidden"
+                aria-label="Закрити карту"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                </svg>
+              </button>
+            )}
+
             {isMounted && (
-              <OSMMap selected={mapPoint} />
+              <div className="h-full w-full">
+                <OSMMap key={viewMode} selected={mapPoint} />
+              </div>
             )}
           </div>
         </aside>
       </div>
 
       {/* SEO СЕКЦІЯ */}
-      <section className="mt-24 border-t border-zinc-200 pt-16 dark:border-zinc-800">
+      <section className={`${viewMode === "map" ? "hidden lg:block" : "block"} mt-24 border-t border-zinc-200 pt-16 px-4 dark:border-zinc-800`}>
         <h2 className="mb-10 text-2xl font-bold text-zinc-900 dark:text-zinc-100 lg:text-3xl text-center md:text-left">
           Досліджуйте Трускавець за категоріями
         </h2>
@@ -157,7 +201,6 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
               </span>
             </Link>
           ))}
-          {/* ... інші посилання ... */}
         </div>
       </section>
     </div>
