@@ -1,5 +1,7 @@
+export const revalidate = 86400;
+
 import { Metadata } from "next";
-import Image from "next/image"; // ІМПОРТУЄМО IMAGE
+import Image from "next/image"; 
 import { supabase } from "./lib/supabase";
 import HomeClient from "./components/HomeClient";
 

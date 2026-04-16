@@ -29,7 +29,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
     setIsMounted(true);
   }, []);
 
-  // Функція відкриття карти із записом скролу
+  // Функція відкриття карти із записом скролу ДО зміни стану
   const openMapMode = () => {
     if (typeof window !== 'undefined') {
       scrollPosRef.current = window.scrollY;
@@ -46,18 +46,19 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
     } else {
       document.body.style.overflow = "unset";
       
-      // Повертаємо користувача на те саме місце
-      if (scrollPosRef.current !== 0) {
-        setTimeout(() => {
+      // Повертаємо користувача на те саме місце після виходу з карти
+      if (isMounted && scrollPosRef.current !== 0) {
+        const timer = setTimeout(() => {
           window.scrollTo({
             top: scrollPosRef.current,
             behavior: 'instant'
           });
-        }, 10);
+        }, 30);
+        return () => clearTimeout(timer);
       }
     }
     return () => { document.body.style.overflow = "unset"; };
-  }, [viewMode]);
+  }, [viewMode, isMounted]);
 
   const categories = [
     { key: "cafe", label: "Кавʼярні" },
@@ -95,6 +96,11 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
     }
   };
 
+  // Захист від помилок гідратації: не рендеримо контент, поки клієнт не готовий
+  if (!isMounted) {
+    return <div className="min-h-screen bg-white dark:bg-zinc-950" />;
+  }
+
   return (
     <div className="relative min-h-screen">
       {/* ПАНЕЛЬ ФІЛЬТРІВ: прилипає до самого верху (top-0) */}
@@ -130,10 +136,10 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
       </div>
 
       <div className="grid gap-8 lg:grid-cols-12 items-start px-4">
-        {/* СЕКЦІЯ СПИСКУ: не видаляється з DOM для збереження скролу */}
+        {/* СЕКЦІЯ СПИСКУ: збереження скролу через invisible та h-0 */}
         <section className={`
           lg:block lg:col-span-7 xl:col-span-8
-          ${viewMode === "map" ? "invisible h-0 overflow-hidden" : "block relative"}
+          ${viewMode === "map" ? "invisible h-0 overflow-hidden pointer-events-none" : "block relative"}
         `}>
           <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             Знайдено: {filtered.length}
@@ -149,7 +155,7 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
           </div>
         </section>
 
-        {/* МАПА: fixed inset-0 на мобайлі для повного екрану */}
+        {/* МАПА: fixed на весь екран на мобайлі */}
         <aside className={`
           ${viewMode === "list" ? "hidden lg:block" : "fixed inset-0 z-[1500] bg-white dark:bg-zinc-950"} 
           lg:static lg:col-span-5 xl:col-span-4 lg:sticky lg:top-[100px] lg:h-[calc(100vh-120px)]
@@ -169,11 +175,9 @@ export default function HomeClient({ initialPlaces }: { initialPlaces: Place[] }
               </button>
             )}
 
-            {isMounted && (
-              <div className="h-full w-full">
-                <OSMMap key={viewMode} selected={mapPoint} />
-              </div>
-            )}
+            <div className="h-full w-full">
+              <OSMMap key={viewMode} selected={mapPoint} />
+            </div>
           </div>
         </aside>
       </div>
