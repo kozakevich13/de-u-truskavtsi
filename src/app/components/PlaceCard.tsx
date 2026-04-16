@@ -24,11 +24,15 @@ export default function PlaceCard({
   place: Place;
   onShow?: (p: Place) => void;
 }) {
+  // Виносимо URL в константу для зручності
+  const placeUrl = `/${place.category}/${place.slug}`;
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
       
+      {/* 1. Посилання на зображенні */}
       <Link 
-        href={`/${place.category}/${place.slug}`}
+        href={placeUrl}
         className="relative h-44 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800"
       >
         <div className="absolute left-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-900 shadow-sm backdrop-blur-sm dark:bg-zinc-900/90 dark:text-zinc-100">
@@ -38,7 +42,8 @@ export default function PlaceCard({
         {place.main_image ? (
           <Image
             src={place.main_image.trim()}
-            alt={place.name}
+            // Додаємо назву закладу в alt — це важливо для SEO внутрішньої сторінки
+            alt={`${categoryLabels[place.category] || ''} ${place.name} Трускавець`}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"
             sizes="(max-width: 768px) 100vw, 33vw"
@@ -51,24 +56,28 @@ export default function PlaceCard({
         <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/5" />
       </Link>
 
-      <Link 
-        href={`/${place.category}/${place.slug}`} 
-        className="flex-grow p-4 cursor-pointer"
-      >
+      {/* 2. Контентна частина */}
+      <div className="flex-grow p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            {place.name}
-          </h3>
+          {/* РОБИМО НАЗВУ ПОСИЛАННЯМ (Найважливіша зміна для SEO) */}
+          <Link href={placeUrl} className="flex-grow group/title">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 transition-colors">
+              {place.name}
+            </h3>
+          </Link>
+
           {typeof place.rating === "number" && (
             <span className="flex items-center gap-0.5 text-xs font-bold text-amber-600">
               ★{place.rating.toFixed(1)}
             </span>
           )}
         </div>
+        
+        {/* Адреса залишається просто текстом */}
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
           {place.address}
         </p>
-      </Link>
+      </div>
 
       <div className="flex items-center justify-between border-t border-zinc-50 p-3 dark:border-zinc-800/50">
         <div className="flex flex-col">
