@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase";
 import PlaceMedia from "../../components/PlaceMedia";
 import ExpandableDescription from "../../components/ExpandableDescription";
 import RecommendedPlaces from "../../components/RecommendedPlaces";
+import PlaceMenu from "../../components/PlaceMenu"; // 1. Імпортуємо новий компонент
 import { Place } from "../../types/place";
 
 type Params = {
@@ -37,7 +38,6 @@ const categoryUrlMapping: Record<string, string> = {
   mall: "malls"
 };
 
-// Допоміжна функція для визначення типу Schema.org
 const getSchemaType = (category: string) => {
   switch (category) {
     case 'cafe': return 'Cafe';
@@ -60,7 +60,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   if (!place) return { title: "Місце не знайдено" };
 
-  // ОПТИМІЗОВАНИЙ ЗАГОЛОВОК: Назва + Місто + ключові слова
   const title = `${place.name} Трускавець — фото, ціни, адреса та відгуки`;
   const description = place.description?.slice(0, 160) || `Відвідайте ${place.name} у Трускавці. Актуальна інформація, карта та фото.`;
   const imageUrl = place.main_image?.trim() || "";
@@ -95,6 +94,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
+  // 2. Поле menu автоматично підтягнеться через select("*")
   const { data: place, error } = await supabase
     .from("places")
     .select("*")
@@ -123,7 +123,7 @@ export default async function PlacePage({ params }: Params) {
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": getSchemaType(category), // Динамічний тип
+    "@type": getSchemaType(category),
     "name": place.name,
     "description": place.description,
     "image": mainImage,
@@ -142,6 +142,8 @@ export default async function PlacePage({ params }: Params) {
     "url": `https://detruckavtsi.info/${category}/${slug}`,
     "telephone": place.phone || undefined, 
     "priceRange": "$$", 
+    // Додаємо інформацію про меню в мікророзмітку
+    "hasMenu": place.menu ? `https://detruckavtsi.info/${category}/${slug}#menu` : undefined,
     "aggregateRating": place.rating ? {
       "@type": "AggregateRating",
       "ratingValue": place.rating,
@@ -221,6 +223,11 @@ export default async function PlacePage({ params }: Params) {
               />
             </div>
           )}
+
+          {/* 3. Додаємо компонент меню під описом */}
+          <div id="menu">
+            <PlaceMenu menu={place.menu} />
+          </div>
 
           <PlaceMedia media={place.places_media} />
 

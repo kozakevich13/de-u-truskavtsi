@@ -24,4 +24,17 @@ export interface Place {
   created_at?: string;
   slug: string;
   main_image: string;
+  menu?: MenuSection[];
 }
+
+export interface MenuItem {
+  name: string;
+  price: string;
+  weight?: string;
+}
+
+export interface MenuSection {
+  category: string;
+  items: MenuItem[];
+}
+
