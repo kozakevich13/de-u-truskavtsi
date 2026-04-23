@@ -224,7 +224,6 @@ export default async function PlacePage({ params }: Params) {
             </div>
           )}
 
-          {/* 3. Додаємо компонент меню під описом */}
           <div id="menu">
             <PlaceMenu menu={place.menu} />
           </div>
