@@ -53,15 +53,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const { data: place } = await supabase
     .from("places")
-    .select("name, description, main_image, category, slug, address, keywords") 
+    .select("name, short_description, main_image, category, slug, address, keywords") 
     .eq("category", category)
     .eq("slug", slug)
     .single();
 
   if (!place) return { title: "Місце не знайдено" };
 
-  const title = `${place.name} Трускавець — фото, ціни, адреса та відгуки`;
-  const description = place.description?.slice(0, 160) || `Відвідайте ${place.name} у Трускавці. Актуальна інформація, карта та фото.`;
+  const title = `${place.name} Трускавець 2026 — фото, ціни, адреса та відгуки`;
+  const description = place.short_description || `Відвідайте ${place.name} у Трускавці. Актуальна інформація, карта та фото.`;
+  
   const imageUrl = place.main_image?.trim() || "";
   const url = `https://detruckavtsi.info/${place.category}/${place.slug}`;
 
@@ -94,7 +95,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PlacePage({ params }: Params) {
   const { category, slug } = await params;
 
-  // 2. Поле menu автоматично підтягнеться через select("*")
   const { data: place, error } = await supabase
     .from("places")
     .select("*")
