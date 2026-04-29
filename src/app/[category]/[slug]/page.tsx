@@ -9,6 +9,7 @@ import ExpandableDescription from "../../components/ExpandableDescription";
 import RecommendedPlaces from "../../components/RecommendedPlaces";
 import PlaceMenu from "../../components/PlaceMenu"; // 1. Імпортуємо новий компонент
 import { Place } from "../../types/place";
+import PlaceReviews from "../../components/PlaceReviews";
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
@@ -242,6 +243,7 @@ export default async function PlacePage({ params }: Params) {
               </div>
             </div>
           )}
+            <PlaceReviews reviews={place.reviews} />
         </article>
 
         <aside className="lg:col-span-1">
