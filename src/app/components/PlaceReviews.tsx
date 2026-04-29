@@ -7,8 +7,8 @@ interface Review {
   text: string;
 }
 
-export default function PlaceReviews({ reviews }: { reviews: any }) {
-  const reviewsList: Review[] = Array.isArray(reviews) ? reviews : [];
+export default function PlaceReviews({ reviews }: { reviews: Review[] | null | undefined }) {
+  const reviewsList = Array.isArray(reviews) ? reviews : [];
 
   if (reviewsList.length === 0) return null;
 
@@ -21,7 +21,6 @@ export default function PlaceReviews({ reviews }: { reviews: any }) {
         </h2>
       </div>
 
-      {/* Змінено на flex-col для вертикального розташування */}
       <div className="flex flex-col gap-6 max-w-3xl"> 
         {reviewsList.map((review, index) => (
           <div 
@@ -38,7 +37,6 @@ export default function PlaceReviews({ reviews }: { reviews: any }) {
 
             <div className="mt-6 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-6">
               <div className="flex items-center gap-3">
-                {/* Аватарка з першою літерою імені */}
                 <div className="h-10 w-10 rounded-full bg-zinc-900 text-white flex items-center justify-center font-black text-sm">
                   {review.user.charAt(0)}
                 </div>
