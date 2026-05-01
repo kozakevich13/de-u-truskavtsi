@@ -122,37 +122,52 @@ export default async function PlacePage({ params }: Params) {
     ? place.image_url.filter((img: string) => img !== mainImage) 
     : [];
 
-  const jsonLd = {
+  // Створюємо базовий об'єкт мікророзмітки
+  const jsonLd: any = {
     "@context": "https://schema.org",
     "@type": getSchemaType(category),
     "name": place.name,
-    "description": place.description,
+    "description": place.description || place.short_description,
     "image": mainImage,
+    "url": `https://detruckavtsi.info/${category}/${slug}`,
     "address": {
       "@type": "PostalAddress",
       "streetAddress": place.address,
       "addressLocality": "Truskavets",
       "addressRegion": "Lviv Oblast",
       "addressCountry": "UA"
-    },
-    "geo": place.lat && place.lng ? {
+    }
+  };
+
+  // Додаємо телефон лише якщо він є
+  if (place.phone) {
+    jsonLd.telephone = place.phone;
+  }
+
+  // Додаємо координати лише якщо вони є
+  if (place.lat && place.lng) {
+    jsonLd.geo = {
       "@type": "GeoCoordinates",
       "latitude": place.lat,
       "longitude": place.lng
-    } : undefined,
-    "url": `https://detruckavtsi.info/${category}/${slug}`,
-    "telephone": place.phone || undefined, 
-    "priceRange": "$$", 
-    // Додаємо інформацію про меню в мікророзмітку
-    "hasMenu": place.menu ? `https://detruckavtsi.info/${category}/${slug}#menu` : undefined,
-    "aggregateRating": place.rating ? {
+    };
+  }
+
+  // Додаємо меню
+  if (place.menu) {
+    jsonLd.hasMenu = `https://detruckavtsi.info/${category}/${slug}#menu`;
+  }
+
+  // ВИПРАВЛЕННЯ: Додаємо рейтинг лише як частину головного об'єкта
+  if (typeof place.rating === "number" && place.rating > 0) {
+    jsonLd.aggregateRating = {
       "@type": "AggregateRating",
-      "ratingValue": place.rating,
+      "ratingValue": place.rating.toFixed(1),
       "bestRating": "5",
       "worstRating": "1",
-      "ratingCount": "15" 
-    } : undefined
-  };
+      "ratingCount": "15" // Можна замінити на реальну кількість відгуків, якщо є в базі
+    };
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">

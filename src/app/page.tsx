@@ -19,35 +19,58 @@ export default async function HomePage() {
 
   const initialPlaces = places ?? [];
 
+  // Мікророзмітка для головної сторінки
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ItemList",
-    "itemListElement": initialPlaces.map((place, index) => ({
-      "@type": "ListItem",
-      "position": index + 1,
-      "item": {
-        "@type": "LocalBusiness",
-        "name": place.name,
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": place.address,
-          "addressLocality": "Truskavets",
-          "addressRegion": "Lviv Oblast",
-          "addressCountry": "UA"
-        },
-        "image": place.main_image,
-        "url": `https://detruckavtsi.info/${place.category}/${place.slug}`,
-        "aggregateRating": place.rating ? {
-          "@type": "AggregateRating",
-          "ratingValue": place.rating,
-          "reviewCount": "10" 
-        } : undefined
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "Відкривай Трускавець",
+        "url": "https://detruckavtsi.info",
+        "description": "Найповніший путівник Трускавцем: від бюветів до ресторанів."
+      },
+      {
+        "@type": "ItemList",
+        "name": "Популярні заклади Трускавця",
+        "itemListElement": initialPlaces.slice(0, 15).map((place, index) => {
+          const item: any = {
+            "@type": "LocalBusiness",
+            "name": place.name,
+            "url": `https://detruckavtsi.info/${place.category}/${place.slug}`,
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": place.address,
+              "addressLocality": "Truskavets",
+              "addressRegion": "Lviv Oblast",
+              "addressCountry": "UA"
+            }
+          };
+
+          if (place.main_image) item.image = place.main_image;
+
+          // Додаємо рейтинг безпечно, щоб не було <parent_node> помилок
+          if (typeof place.rating === "number" && place.rating > 0) {
+            item.aggregateRating = {
+              "@type": "AggregateRating",
+              "ratingValue": place.rating.toFixed(1),
+              "bestRating": "5",
+              "worstRating": "1",
+              "ratingCount": "10"
+            };
+          }
+
+          return {
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": item
+          };
+        })
       }
-    }))
+    ]
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 md:py-12 text-black dark:text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
