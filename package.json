@@ -20,7 +20,8 @@
     "react-leaflet": "^5.0.0",
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
-    "redux-thunk": "^3.1.0"
+    "redux-thunk": "^3.1.0",
+    "schema-dts": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

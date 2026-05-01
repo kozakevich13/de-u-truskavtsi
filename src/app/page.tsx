@@ -4,10 +4,11 @@ import { Metadata } from "next";
 import Image from "next/image"; 
 import { supabase } from "./lib/supabase";
 import HomeClient from "./components/HomeClient";
+import { Graph, LocalBusiness, ListItem } from "schema-dts"; // Опціонально, якщо встановлено schema-dts
 
 export const metadata: Metadata = {
   title: "Трускавець: Карта закладів, кав'ярень та відпочинку",
-  description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи.",
+  description: "Знайдіть найкращі кав'ярні, ресторана та готелі у Трускавці. Актуальна карта міста з графіком роботи.",
   keywords: ["Трускавець", "карта", "заклади", "відпочинок", "кав'ярні", "ресторани"],
 };
 
@@ -19,8 +20,8 @@ export default async function HomePage() {
 
   const initialPlaces = places ?? [];
 
-  // Мікророзмітка для головної сторінки
-  const jsonLd = {
+  // Описуємо структуру без any
+  const jsonLd: Graph = {
     "@context": "https://schema.org",
     "@graph": [
       {
@@ -32,8 +33,9 @@ export default async function HomePage() {
       {
         "@type": "ItemList",
         "name": "Популярні заклади Трускавця",
-        "itemListElement": initialPlaces.slice(0, 15).map((place, index) => {
-          const item: any = {
+        "itemListElement": initialPlaces.slice(0, 15).map((place, index): ListItem => {
+          // Створюємо об'єкт з типом LocalBusiness
+          const businessItem: LocalBusiness = {
             "@type": "LocalBusiness",
             "name": place.name,
             "url": `https://detruckavtsi.info/${place.category}/${place.slug}`,
@@ -46,11 +48,10 @@ export default async function HomePage() {
             }
           };
 
-          if (place.main_image) item.image = place.main_image;
+          if (place.main_image) businessItem.image = place.main_image;
 
-          // Додаємо рейтинг безпечно, щоб не було <parent_node> помилок
           if (typeof place.rating === "number" && place.rating > 0) {
-            item.aggregateRating = {
+            businessItem.aggregateRating = {
               "@type": "AggregateRating",
               "ratingValue": place.rating.toFixed(1),
               "bestRating": "5",
@@ -62,7 +63,7 @@ export default async function HomePage() {
           return {
             "@type": "ListItem",
             "position": index + 1,
-            "item": item
+            "item": businessItem
           };
         })
       }

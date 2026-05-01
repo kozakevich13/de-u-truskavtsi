@@ -7,9 +7,39 @@ import { supabase } from "../../lib/supabase";
 import PlaceMedia from "../../components/PlaceMedia";
 import ExpandableDescription from "../../components/ExpandableDescription";
 import RecommendedPlaces from "../../components/RecommendedPlaces";
-import PlaceMenu from "../../components/PlaceMenu"; // 1. Імпортуємо новий компонент
+import PlaceMenu from "../../components/PlaceMenu";
 import { Place } from "../../types/place";
 import PlaceReviews from "../../components/PlaceReviews";
+
+interface SchemaPlace {
+  "@context": "https://schema.org";
+  "@type": string;
+  name: string;
+  description?: string;
+  image?: string;
+  url: string;
+  address: {
+    "@type": "PostalAddress";
+    streetAddress: string;
+    addressLocality: string;
+    addressRegion: string;
+    addressCountry: string;
+  };
+  telephone?: string;
+  geo?: {
+    "@type": "GeoCoordinates";
+    latitude: number;
+    longitude: number;
+  };
+  hasMenu?: string;
+  aggregateRating?: {
+    "@type": "AggregateRating";
+    ratingValue: string;
+    bestRating: string;
+    worstRating: string;
+    ratingCount: string;
+  };
+}
 
 type Params = {
   params: Promise<{ category: string; slug: string }>;
@@ -39,7 +69,7 @@ const categoryUrlMapping: Record<string, string> = {
   mall: "malls"
 };
 
-const getSchemaType = (category: string) => {
+const getSchemaType = (category: string): string => {
   switch (category) {
     case 'cafe': return 'Cafe';
     case 'restaurant': return 'Restaurant';
@@ -122,8 +152,8 @@ export default async function PlacePage({ params }: Params) {
     ? place.image_url.filter((img: string) => img !== mainImage) 
     : [];
 
-  // Створюємо базовий об'єкт мікророзмітки
-  const jsonLd: any = {
+  // Створюємо базовий об'єкт мікророзмітки без any
+  const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
     "@type": getSchemaType(category),
     "name": place.name,
@@ -139,12 +169,8 @@ export default async function PlacePage({ params }: Params) {
     }
   };
 
-  // Додаємо телефон лише якщо він є
-  if (place.phone) {
-    jsonLd.telephone = place.phone;
-  }
+  if (place.phone) jsonLd.telephone = place.phone;
 
-  // Додаємо координати лише якщо вони є
   if (place.lat && place.lng) {
     jsonLd.geo = {
       "@type": "GeoCoordinates",
@@ -153,24 +179,22 @@ export default async function PlacePage({ params }: Params) {
     };
   }
 
-  // Додаємо меню
   if (place.menu) {
     jsonLd.hasMenu = `https://detruckavtsi.info/${category}/${slug}#menu`;
   }
 
-  // ВИПРАВЛЕННЯ: Додаємо рейтинг лише як частину головного об'єкта
   if (typeof place.rating === "number" && place.rating > 0) {
     jsonLd.aggregateRating = {
       "@type": "AggregateRating",
       "ratingValue": place.rating.toFixed(1),
       "bestRating": "5",
       "worstRating": "1",
-      "ratingCount": "15" // Можна замінити на реальну кількість відгуків, якщо є в базі
+      "ratingCount": "15" 
     };
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6">
+    <main className="mx-auto max-w-6xl px-4 py-6 text-black dark:text-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
