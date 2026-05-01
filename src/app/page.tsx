@@ -1,14 +1,13 @@
 export const revalidate = 86400;
 
 import { Metadata } from "next";
-import Image from "next/image"; 
 import { supabase } from "./lib/supabase";
 import HomeClient from "./components/HomeClient";
-import { Graph, LocalBusiness, ListItem } from "schema-dts"; // Опціонально, якщо встановлено schema-dts
+import { Graph, LocalBusiness, ListItem } from "schema-dts"; 
 
 export const metadata: Metadata = {
   title: "Трускавець: Карта закладів, кав'ярень та відпочинку",
-  description: "Знайдіть найкращі кав'ярні, ресторана та готелі у Трускавці. Актуальна карта міста з графіком роботи.",
+  description: "Знайдіть найкращі кав'ярні, ресторани та готелі у Трускавці. Актуальна карта міста з графіком роботи.",
   keywords: ["Трускавець", "карта", "заклади", "відпочинок", "кав'ярні", "ресторани"],
 };
 
@@ -20,7 +19,6 @@ export default async function HomePage() {
 
   const initialPlaces = places ?? [];
 
-  // Описуємо структуру без any
   const jsonLd: Graph = {
     "@context": "https://schema.org",
     "@graph": [
@@ -28,7 +26,7 @@ export default async function HomePage() {
         "@type": "WebSite",
         "name": "Відкривай Трускавець",
         "url": "https://detruckavtsi.info",
-        "description": "Найповніший путівник Трускавцем: від бюветів до ресторанів."
+        "description": "Найповніший путівник Трускавцем."
       },
       {
         "@type": "ItemList",
@@ -49,7 +47,6 @@ export default async function HomePage() {
           };
 
           if (place.main_image) businessItem.image = place.main_image;
-
           if (typeof place.rating === "number" && place.rating > 0) {
             businessItem.aggregateRating = {
               "@type": "AggregateRating",
@@ -77,23 +74,13 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <header className="mb-10 flex flex-col items-center gap-4 text-center md:items-start md:text-left">
-        <div className="flex items-center gap-4">
-          <div className="relative h-16 w-16 overflow-hidden md:h-20 md:w-20">
-            <Image
-              src="/icon.png"
-              alt="Логотип Відкривай Трускавець"
-              fill
-              className="object-contain" 
-              priority 
-            />
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 md:text-5xl">
-            Відкривай <span className="text-blue-600 dark:text-blue-400">Трускавець</span>
-          </h1>
-        </div>
-        <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-          Найповніший путівник Трускавцем: від бюветів та парків до сучасних кав&apos;ярень та ресторанів. Актуальні ціни та локації на карті.
+      <header className="mb-10 text-center md:text-left">
+        <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 md:text-6xl mb-4">
+          Трускавець <span className="text-blue-600 dark:text-blue-400">2026</span>
+        </h1>
+        <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
+          Найповніший путівник: від бюветів та парків до сучасних кав&apos;ярень та ресторанів. 
+          Актуальні локації та чесні відгуки.
         </p>
       </header>
 

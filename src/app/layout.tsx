@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google"; 
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
+import Header from "./components/Header";
 
 const nunito = Nunito({
   subsets: ["cyrillic", "latin"],
@@ -81,6 +82,7 @@ export default function RootLayout({
         className={`${nunito.className} antialiased`}
         suppressHydrationWarning={true}
       >
+        <Header />
         {children}
         <Analytics />
       </body>
