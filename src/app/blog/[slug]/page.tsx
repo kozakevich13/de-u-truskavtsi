@@ -84,7 +84,7 @@ export default async function PostPage({ params }: Props) {
 
         <div className="prose prose-zinc max-w-none dark:prose-invert prose-p:text-base prose-p:leading-relaxed md:prose-p:text-lg prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter">
           <div className="whitespace-pre-wrap font-medium text-zinc-800 dark:text-zinc-300">
-            {post.content}
+          <div dangerouslySetInnerHTML={{ __html: post.content }} />
           </div>
         </div>
       </article>
