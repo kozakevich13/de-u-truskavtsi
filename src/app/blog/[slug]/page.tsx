@@ -1,26 +1,49 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabase } from "../../lib/supabase"; 
-import { Calendar, User, ChevronLeft } from "lucide-react";
+import { Calendar, User, ChevronLeft, Clock } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
+/**
+ * SEO: Генерація динамічних метаданих та Open Graph
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { data: post } = await supabase
     .from("posts")
-    .select("title, excerpt")
+    .select("title, excerpt, image_url, category")
     .eq("slug", slug)
     .single();
 
   if (!post) return { title: "Стаття не знайдена" };
 
+  const baseUrl = "https://detruckavtsi.info";
+
   return {
     title: `${post.title} | Гід Трускавця`,
     description: post.excerpt,
+    alternates: {
+      canonical: `${baseUrl}/blog/${slug}`,
+    },
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      url: `${baseUrl}/blog/${slug}`,
+      siteName: "Відкривай Трускавець",
+      images: post.image_url ? [{ url: post.image_url }] : [],
+      type: "article",
+      section: post.category,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+      images: post.image_url ? [post.image_url] : [],
+    },
   };
 }
 
@@ -35,64 +58,116 @@ export default async function PostPage({ params }: Props) {
 
   if (error || !post) return notFound();
 
+  // Розрахунок часу читання
+  const wordsPerMinute = 200;
+  const textLength = post.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+  const readingTime = Math.ceil(textLength / wordsPerMinute);
+
+  /**
+   * SEO: JSON-LD Структуровані дані
+   */
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "description": post.excerpt,
+    "image": post.image_url,
+    "author": { "@type": "Person", "name": post.author_name },
+    "datePublished": post.created_at,
+    "genre": post.category,
+  };
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 text-black dark:text-white">
+    <main className="mx-auto max-w-4xl px-4 py-12 text-black dark:text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <Link 
         href="/blog" 
-        className="mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-blue-600 transition-colors"
+        className="mb-12 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-blue-600 transition-all group"
       >
-        <ChevronLeft size={14} /> Назад до гіду
+        <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
+        Назад до всіх статей
       </Link>
 
       <article>
-        <header className="mb-10">
-          <div className="mb-4 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.2em] text-blue-600">
-            <span>{post.category || "Поради"}</span>
-            <span className="h-1 w-1 rounded-full bg-zinc-300" />
-            <span className="text-zinc-400 flex items-center gap-1">
-              <Calendar size={12} />
-              {new Date(post.created_at).toLocaleDateString('uk-UA')}
+        <header className="mb-12">
+          {/* Мета-дані */}
+          <div className="mb-6 flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em]">
+            <span className="bg-blue-600 px-2 py-1 text-white rounded-sm">{post.category || "Поради"}</span>
+            <span className="text-zinc-400 flex items-center gap-1.5">
+              <Calendar size={13} className="text-blue-600" />
+              {new Date(post.created_at).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+            <span className="text-zinc-400 flex items-center gap-1.5">
+              <Clock size={13} className="text-blue-600" />
+              {readingTime} хв читання
             </span>
           </div>
           
-        <h1 className="mb-6 text-2xl font-black leading-tight tracking-tighter md:text-4xl italic uppercase">
-        {post.title}
-        </h1>
+          <h1 className="mb-10 text-4xl font-black leading-[1.1] tracking-tighter md:text-7xl italic uppercase">
+            {post.title}
+          </h1>
 
-          <div className="flex items-center gap-3 border-y border-zinc-100 py-6 dark:border-zinc-800">
-            <div className="h-10 w-10 overflow-hidden rounded-full bg-zinc-100 border border-zinc-200">
-              {post.author_image ? (
-                <img src={post.author_image} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-zinc-400">
-                  <User size={20} />
+          {/* Структура: Фото + Вступ (Excerpt) */}
+          <div className="flex flex-col md:flex-row gap-8 mb-16 items-start">
+            {post.image_url && (
+              <div className="w-full md:w-1/2 flex-shrink-0">
+                <div className="overflow-hidden rounded-[32px] shadow-2xl shadow-blue-500/10 border border-zinc-100 dark:border-zinc-800">
+                  <img 
+                    src={post.image_url} 
+                    alt={post.title} 
+                    className="w-full h-full object-cover aspect-[4/3] hover:scale-105 transition-transform duration-700" 
+                  />
                 </div>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider">{post.author_name}</p>
-              <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-tight">Автор статті</p>
+              </div>
+            )}
+            <div className="w-full md:w-1/2">
+               <h2 className="text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] mb-4 italic">Короткий огляд</h2>
+               <p className="text-xl md:text-2xl font-medium leading-relaxed text-zinc-700 dark:text-zinc-300 italic decoration-blue-600/30 underline-offset-4 decoration-dotted underline">
+                {post.excerpt}
+               </p>
+               
+               <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-4">
+                  <div className="h-12 w-12 overflow-hidden rounded-full ring-2 ring-blue-600/20 bg-zinc-100">
+                    <img src={post.author_image} alt={post.author_name} className="h-full w-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-blue-600">{post.author_name}</p>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Локальний експерт</p>
+                  </div>
+               </div>
             </div>
           </div>
         </header>
 
-        {post.image_url && (
-          <div className="mb-10 overflow-hidden rounded-[32px] shadow-2xl shadow-blue-500/5">
-            <img src={post.image_url} alt={post.title} className="w-full object-cover" />
-          </div>
-        )}
-
-        <div className="prose prose-zinc max-w-none dark:prose-invert prose-p:text-base prose-p:leading-relaxed md:prose-p:text-lg prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter">
-          <div className="whitespace-pre-wrap font-medium text-zinc-800 dark:text-zinc-300">
-          <div dangerouslySetInnerHTML={{ __html: post.content }} />
-          </div>
-        </div>
+        {/* Основний контент з налаштованими відступами та списками */}
+        <div 
+          className="prose prose-zinc max-w-none dark:prose-invert 
+          prose-p:mb-10 prose-p:text-zinc-800 dark:prose-p:text-zinc-200
+          prose-p:text-lg prose-p:leading-[1.8] 
+          prose-headings:mt-20 prose-headings:mb-8 prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter
+          prose-h2:text-3xl md:prose-h2:text-5xl prose-h2:italic prose-h2:text-blue-600/10 dark:prose-h2:text-white/5
+          prose-h3:text-2xl md:prose-h3:text-3xl prose-h3:text-zinc-900 dark:prose-h3:text-white
+          prose-strong:text-black dark:prose-strong:text-white prose-strong:font-black
+          prose-a:text-blue-600 prose-a:font-black prose-a:underline hover:prose-a:text-blue-500 transition-colors
+          prose-ul:my-10 prose-ul:list-disc prose-ul:space-y-4
+          prose-ol:my-10 prose-ol:space-y-4
+          prose-li:text-lg prose-li:leading-relaxed prose-li:pl-2
+          prose-img:rounded-[40px] prose-img:my-16 prose-img:shadow-2xl"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
       </article>
 
-      <footer className="mt-20 border-t border-zinc-100 pt-10 dark:border-zinc-800">
-         <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 italic">
-           Відкривай Трускавець • 2026
-         </p>
+      <footer className="mt-24 border-t border-zinc-100 pt-12 dark:border-zinc-800">
+         <div className="flex flex-col items-center gap-4 text-center">
+            <div className="h-1 w-12 bg-blue-600 rounded-full mb-4" />
+            <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-400 italic">
+               Матеріал підготовлено командою Гіду Трускавця • 2026
+            </p>
+         </div>
       </footer>
     </main>
   );
