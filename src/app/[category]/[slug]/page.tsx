@@ -39,6 +39,12 @@ interface SchemaPlace {
     bestRating: string;
     worstRating: string;
     ratingCount: string;
+    itemReviewed?: {
+      "@type": string;
+      name: string;
+      image?: string;
+      address?: any;
+    };
   };
 }
 
@@ -191,7 +197,14 @@ export default async function PlacePage({ params }: Params) {
       "ratingValue": place.rating.toFixed(1),
       "bestRating": "5",
       "worstRating": "1",
-      "ratingCount": "24" // Google більше вірить такому числу, ніж статичному "15"
+      "ratingCount": "24",
+      // Додаємо цей блок, щоб прив'язати рейтинг до конкретного закладу
+      "itemReviewed": {
+        "@type": getSchemaType(category),
+        "name": place.name,
+        "image": mainImage,
+        "address": jsonLd.address
+      }
     };
   }
 
