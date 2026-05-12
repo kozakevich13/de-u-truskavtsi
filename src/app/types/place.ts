@@ -10,6 +10,12 @@ export type Category =
   | "park"
   | "attraction";
 
+export interface OpeningHours {
+  opens: string;
+  closes: string;
+  dayOfWeek: string[];
+}
+  
 export interface Place {
   id: number;
   name: string;
@@ -25,6 +31,7 @@ export interface Place {
   slug: string;
   main_image: string;
   menu?: MenuSection[];
+  opening_hours?: OpeningHours[] | null;
 }
 
 export interface MenuItem {

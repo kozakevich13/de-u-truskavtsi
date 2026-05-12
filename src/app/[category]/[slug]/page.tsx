@@ -14,6 +14,11 @@ import PlaceReviews from "../../components/PlaceReviews";
 interface SchemaPlace {
   "@context": "https://schema.org";
   "@type": string;
+  mainEntityOfPage?: {
+    "@type": "WebPage";
+    "@id": string;
+  };
+  servesCuisine?: string;
   name: string;
   description?: string;
   image?: string;
@@ -25,6 +30,7 @@ interface SchemaPlace {
     addressLocality: string;
     addressRegion: string;
     addressCountry: string;
+    postalCode?: string;
   };
   telephone?: string;
   geo?: {
@@ -33,6 +39,13 @@ interface SchemaPlace {
     longitude: number;
   };
   hasMenu?: string;
+  // ПРАВИЛЬНЕ МІСЦЕ для графіка роботи:
+  openingHoursSpecification?: Array<{
+    "@type": "OpeningHoursSpecification";
+    dayOfWeek: string[];
+    opens: string;
+    closes: string;
+  }>;
   aggregateRating?: {
     "@type": "AggregateRating";
     ratingValue: string;
@@ -51,10 +64,15 @@ interface SchemaPlace {
     reviewRating: {
       "@type": "Rating";
       ratingValue: string;
+      bestRating?: string; 
+      worstRating?: string; 
+    };
+    publisher?: {    
+      "@type": "Organization";
+      name: string;
     };
   }>;
 }
-
 interface DatabaseReview {
   user: string;
   date: string;
@@ -93,15 +111,42 @@ const categoryUrlMapping: Record<string, string> = {
 
 const getSchemaType = (category: string): string => {
   switch (category) {
-    case 'cafe': return 'CafeOrCoffeeShop'; // Більш точний тип
+    case 'cafe': return 'CafeOrCoffeeShop'; 
     case 'restaurant': return 'Restaurant';
     case 'hotel': return 'Hotel';
-    case 'sanatorium': return 'Hotel'; // Санаторії краще маркувати як Hotel, щоб були зірочки
+    case 'sanatorium': return 'Hotel'; 
     case 'museums': return 'LocalBusiness';
     case 'cinema': return 'MovieTheater';
     case 'mall': return 'ShoppingCenter';
     default: return 'LocalBusiness';
   }
+};
+const getServesCuisine = (category: string): string | undefined => {
+  switch (category) {
+    case 'cafe': return 'Coffee, Desserts, European';
+    case 'restaurant': return 'Ukrainian, European, Pizza';
+    default: return undefined;
+  }
+};
+
+const getOpeningHours = (place: Place): SchemaPlace["openingHoursSpecification"] => {
+  if (place.opening_hours && Array.isArray(place.opening_hours)) {
+    return place.opening_hours.map((period: any) => ({
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": period.dayOfWeek,
+      "opens": period.opens,
+      "closes": period.closes
+    }));
+  }
+
+  return [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      "opens": "09:00",
+      "closes": "21:00"
+    }
+  ];
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -177,7 +222,6 @@ export default async function PlacePage({ params }: Params) {
     ? place.image_url.filter((img: string) => img !== mainImage) 
     : [];
 
-  // 1. Формуємо масив відгуків окремо з явною типізацією
   const reviewsSchema = (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0)
     ? (place.reviews as DatabaseReview[]).map((rev) => ({
         "@type": "Review" as const,
@@ -191,7 +235,7 @@ export default async function PlacePage({ params }: Params) {
           "@type": "Rating" as const,
           "ratingValue": (rev.rating || 5).toString(),
           "bestRating": "5",
-          "worstRating": "1" // Додаємо ці поля сюди теж
+          "worstRating": "1" 
         },
         "publisher": {
           "@type": "Organization" as const,
@@ -200,23 +244,29 @@ export default async function PlacePage({ params }: Params) {
       }))
     : undefined;
 
-  // 2. Збираємо об'єкт одним шматком
   const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
     "@type": getSchemaType(category),
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://detruckavtsi.info/${category}/${slug}`
+    },
     "name": place.name,
     "description": place.short_description || place.description,
     "image": mainImage,
     "url": `https://detruckavtsi.info/${category}/${slug}`,
     "priceRange": "$$",
+    "servesCuisine": getServesCuisine(category),
+    "openingHoursSpecification": getOpeningHours(place), 
+    "telephone": place.phone || undefined,    
     "address": {
       "@type": "PostalAddress",
       "streetAddress": place.address,
       "addressLocality": "Truskavets",
       "addressRegion": "Lviv Oblast",
-      "addressCountry": "UA"
+      "addressCountry": "UA",
+      "postalCode": "82200" 
     },
-    "telephone": place.phone || undefined,
     "geo": (place.lat && place.lng) ? {
       "@type": "GeoCoordinates",
       "latitude": place.lat,
@@ -232,14 +282,6 @@ export default async function PlacePage({ params }: Params) {
     } : undefined,
     "review": reviewsSchema
   };
-
- // Додай це прямо перед return
- console.log("--- DEBUG JSON-LD START ---");
- console.log("Place Name:", place.name);
- console.log("Rating Type:", typeof place.rating, "Value:", place.rating);
- console.log("Reviews Type:", Array.isArray(place.reviews) ? "Array" : typeof place.reviews);
- console.log("Final JSON-LD:", JSON.stringify(jsonLd, null, 2));
- console.log("--- DEBUG JSON-LD END ---");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 text-black dark:text-white">
