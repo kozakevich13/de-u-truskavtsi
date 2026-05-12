@@ -43,7 +43,13 @@ interface SchemaPlace {
       "@type": string;
       name: string;
       image?: string;
-      address?: any;
+      address?: {
+        "@type": "PostalAddress";
+        streetAddress: string;
+        addressLocality: string;
+        addressRegion: string;
+        addressCountry: string;
+      };
     };
   };
 }
