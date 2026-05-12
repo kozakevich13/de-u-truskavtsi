@@ -175,6 +175,35 @@ export default async function PlacePage({ params }: Params) {
     : [];
 
   // Створюємо базовий об'єкт мікророзмітки без any
+  // 1. Підготовлюємо дані для відгуків заздалегідь
+  const reviewsSchema = place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0
+    ? (place.reviews as DatabaseReview[]).map((rev) => ({
+        "@type": "Review" as const,
+        "author": {
+          "@type": "Person" as const,
+          "name": rev.user || "Анонім"
+        },
+        "datePublished": rev.date || "2026-01-01",
+        "reviewBody": rev.text || "",
+        "reviewRating": {
+          "@type": "Rating" as const,
+          "ratingValue": rev.rating ? rev.rating.toString() : "5"
+        }
+      }))
+    : undefined;
+
+  // 2. Підготовлюємо рейтинг заздалегідь
+  const ratingSchema = typeof place.rating === "number" && place.rating > 0
+    ? {
+        "@type": "AggregateRating" as const,
+        "ratingValue": place.rating.toFixed(1).toString(),
+        "reviewCount": place.reviews?.length.toString() || "1",
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    : undefined;
+
+  // 3. Збираємо фінальний об'єкт ОДРАЗУ цілим (це прибере помилку parent_node)
   const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
     "@type": getSchemaType(category),
@@ -189,7 +218,16 @@ export default async function PlacePage({ params }: Params) {
       "addressLocality": "Truskavets",
       "addressRegion": "Lviv Oblast",
       "addressCountry": "UA"
-    }
+    },
+    "telephone": place.phone || undefined,
+    "geo": place.lat && place.lng ? {
+      "@type": "GeoCoordinates",
+      "latitude": place.lat,
+      "longitude": place.lng
+    } : undefined,
+    "hasMenu": place.menu ? `https://detruckavtsi.info/${category}/${slug}#menu` : undefined,
+    "aggregateRating": ratingSchema,
+    "review": reviewsSchema
   };
 
 
