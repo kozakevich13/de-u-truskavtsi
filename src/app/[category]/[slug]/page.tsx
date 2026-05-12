@@ -40,6 +40,19 @@ interface SchemaPlace {
     bestRating: string;
     worstRating: string;
   };
+  review?: {
+    "@type": "Review";
+    author: {
+      "@type": "Person";
+      name: string;
+    };
+    datePublished: string;
+    reviewBody: string;
+    reviewRating: {
+      "@type": "Rating";
+      ratingValue: string;
+    };
+  }[];
 }
 
 type Params = {
@@ -187,15 +200,33 @@ export default async function PlacePage({ params }: Params) {
     jsonLd.hasMenu = `https://detruckavtsi.info/${category}/${slug}#menu`;
   }
 
-  if (typeof place.rating === "number" && place.rating > 0) {
-    jsonLd.aggregateRating = {
-      "@type": "AggregateRating",
-      "ratingValue": place.rating.toFixed(1).toString(), // Має бути рядком "5.0"
-      "reviewCount": "24", // Рядок
-      "bestRating": "5",
-      "worstRating": "1"
-    };
-  }
+// Додаємо AggregateRating
+if (typeof place.rating === "number" && place.rating > 0) {
+  jsonLd.aggregateRating = {
+    "@type": "AggregateRating",
+    "ratingValue": place.rating.toFixed(1).toString(),
+    "reviewCount": place.reviews?.length.toString() || "24",
+    "bestRating": "5",
+    "worstRating": "1"
+  };
+}
+
+// ДОДАЄМО САМІ ВІДГУКИ (це виправить помилку з фото)
+if (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0) {
+  jsonLd.review = place.reviews.map((rev: any) => ({
+    "@type": "Review",
+    "author": {
+      "@type": "Person",
+      "name": rev.user || "Анонім"
+    },
+    "datePublished": rev.date || "2026-01-01",
+    "reviewBody": rev.text || "",
+    "reviewRating": {
+      "@type": "Rating",
+      "ratingValue": rev.rating // Можна витягувати реальну оцінку, якщо вона є в JSON
+    }
+  }));
+}
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 text-black dark:text-white">
