@@ -55,6 +55,14 @@ interface SchemaPlace {
   }[];
 }
 
+interface DatabaseReview {
+  user: string;
+  date: string;
+  text: string;
+  rating: number;
+  source?: string;
+}
+
 type Params = {
   params: Promise<{ category: string; slug: string }>;
 };
@@ -213,7 +221,7 @@ if (typeof place.rating === "number" && place.rating > 0) {
 
 // ДОДАЄМО САМІ ВІДГУКИ (це виправить помилку з фото)
 if (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0) {
-  jsonLd.review = place.reviews.map((rev: any) => ({
+  jsonLd.review = place.reviews.map((rev: DatabaseReview) => ({
     "@type": "Review",
     "author": {
       "@type": "Person",
