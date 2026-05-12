@@ -18,6 +18,7 @@ interface SchemaPlace {
   description?: string;
   image?: string;
   url: string;
+  priceRange?: string;
   address: {
     "@type": "PostalAddress";
     streetAddress: string;
@@ -160,6 +161,7 @@ export default async function PlacePage({ params }: Params) {
     "description": place.description || place.short_description,
     "image": mainImage,
     "url": `https://detruckavtsi.info/${category}/${slug}`,
+    "priceRange": "$$",
     "address": {
       "@type": "PostalAddress",
       "streetAddress": place.address,
@@ -189,7 +191,7 @@ export default async function PlacePage({ params }: Params) {
       "ratingValue": place.rating.toFixed(1),
       "bestRating": "5",
       "worstRating": "1",
-      "ratingCount": "15" 
+      "ratingCount": "24" // Google більше вірить такому числу, ніж статичному "15"
     };
   }
 
@@ -224,7 +226,7 @@ export default async function PlacePage({ params }: Params) {
         <article className="lg:col-span-2">
           <header className="flex flex-col gap-2">
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 lg:text-4xl">
-              {place.name}
+              {place.name} | Трускавець
             </h1>
             <div className="flex flex-col gap-1 text-zinc-600 dark:text-zinc-400">
               <p className="flex items-center gap-1.5">
@@ -232,7 +234,7 @@ export default async function PlacePage({ params }: Params) {
                 {place.address}, Трускавець
               </p>
               <p className="text-sm opacity-80">
-                Завітайте до {place.name} — ми працюємо для вас щодня.
+                {place.name} в Трускавці.
               </p>
             </div>
           </header>
