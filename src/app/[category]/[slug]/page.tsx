@@ -131,8 +131,8 @@ const getServesCuisine = (category: string): string | undefined => {
 
 const getOpeningHours = (place: Place): SchemaPlace["openingHoursSpecification"] => {
   if (place.opening_hours && Array.isArray(place.opening_hours)) {
-    return place.opening_hours.map((period: any) => ({
-      "@type": "OpeningHoursSpecification",
+    return place.opening_hours.map((period): NonNullable<SchemaPlace["openingHoursSpecification"]>[number] => ({
+      "@type": "OpeningHoursSpecification" as const,
       "dayOfWeek": period.dayOfWeek,
       "opens": period.opens,
       "closes": period.closes
@@ -141,7 +141,7 @@ const getOpeningHours = (place: Place): SchemaPlace["openingHoursSpecification"]
 
   return [
     {
-      "@type": "OpeningHoursSpecification",
+      "@type": "OpeningHoursSpecification" as const,
       "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
       "opens": "09:00",
       "closes": "21:00"
