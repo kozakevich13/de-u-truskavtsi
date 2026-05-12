@@ -107,7 +107,7 @@ export default async function PostPage({ params }: Props) {
             </span>
           </div>
           
-          <h1 className="mb-10 text-4xl font-black leading-[1.1] tracking-tighter md:text-7xl italic uppercase">
+          <h1 className="mb-8 text-2xl font-black leading-tight tracking-tighter md:text-5xl italic uppercase">
             {post.title}
           </h1>
 
