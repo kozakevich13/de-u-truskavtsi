@@ -93,10 +93,13 @@ const categoryUrlMapping: Record<string, string> = {
 
 const getSchemaType = (category: string): string => {
   switch (category) {
-    case 'cafe': return 'Cafe';
+    case 'cafe': return 'CafeOrCoffeeShop'; // Більш точний тип
     case 'restaurant': return 'Restaurant';
     case 'hotel': return 'Hotel';
-    case 'sanatorium': return 'MedicalOrganization';
+    case 'sanatorium': return 'Hotel'; // Санаторії краще маркувати як Hotel, щоб були зірочки
+    case 'museums': return 'LocalBusiness';
+    case 'cinema': return 'MovieTheater';
+    case 'mall': return 'ShoppingCenter';
     default: return 'LocalBusiness';
   }
 };
