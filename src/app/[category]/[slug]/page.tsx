@@ -32,13 +32,13 @@ interface SchemaPlace {
     latitude: number;
     longitude: number;
   };
-  hasMenu?: string;
+  hasMenu?: string;  
   aggregateRating?: {
     "@type": "AggregateRating";
     ratingValue: string;
+    reviewCount: string;
     bestRating: string;
     worstRating: string;
-    ratingCount: string;
   };
 }
 
@@ -156,9 +156,9 @@ export default async function PlacePage({ params }: Params) {
   // Створюємо базовий об'єкт мікророзмітки без any
   const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
-    "@type": getSchemaType(category),
+    "@type": getSchemaType(category), // Тут має бути 'Restaurant' або 'Cafe'
     "name": place.name,
-    "description": place.description || place.short_description,
+    "description": place.short_description || place.description,
     "image": mainImage,
     "url": `https://detruckavtsi.info/${category}/${slug}`,
     "priceRange": "$$",
@@ -170,6 +170,8 @@ export default async function PlacePage({ params }: Params) {
       "addressCountry": "UA"
     }
   };
+
+
 
   if (place.phone) jsonLd.telephone = place.phone;
 
@@ -188,10 +190,10 @@ export default async function PlacePage({ params }: Params) {
   if (typeof place.rating === "number" && place.rating > 0) {
     jsonLd.aggregateRating = {
       "@type": "AggregateRating",
-      "ratingValue": place.rating.toFixed(1),
+      "ratingValue": place.rating.toFixed(1).toString(), // Має бути рядком "5.0"
+      "reviewCount": "24", // Рядок
       "bestRating": "5",
-      "worstRating": "1",
-      "ratingCount": "24" 
+      "worstRating": "1"
     };
   }
 
