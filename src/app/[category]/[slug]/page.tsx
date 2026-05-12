@@ -32,7 +32,7 @@ interface SchemaPlace {
     latitude: number;
     longitude: number;
   };
-  hasMenu?: string;  
+  hasMenu?: string;
   aggregateRating?: {
     "@type": "AggregateRating";
     ratingValue: string;
@@ -40,7 +40,7 @@ interface SchemaPlace {
     bestRating: string;
     worstRating: string;
   };
-  review?: {
+  review?: Array<{
     "@type": "Review";
     author: {
       "@type": "Person";
@@ -52,7 +52,7 @@ interface SchemaPlace {
       "@type": "Rating";
       ratingValue: string;
     };
-  }[];
+  }>;
 }
 
 interface DatabaseReview {
@@ -174,36 +174,24 @@ export default async function PlacePage({ params }: Params) {
     ? place.image_url.filter((img: string) => img !== mainImage) 
     : [];
 
-  // Створюємо базовий об'єкт мікророзмітки без any
-  // 1. Підготовлюємо дані для відгуків заздалегідь
-  const reviewsSchema = place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0
+  // 1. Формуємо масив відгуків окремо з явною типізацією
+  const reviewsSchema = (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0)
     ? (place.reviews as DatabaseReview[]).map((rev) => ({
         "@type": "Review" as const,
         "author": {
           "@type": "Person" as const,
-          "name": rev.user || "Анонім"
+          "name": rev.user || "Відвідувач"
         },
         "datePublished": rev.date || "2026-01-01",
         "reviewBody": rev.text || "",
         "reviewRating": {
           "@type": "Rating" as const,
-          "ratingValue": rev.rating ? rev.rating.toString() : "5"
+          "ratingValue": (rev.rating || 5).toString()
         }
       }))
     : undefined;
 
-  // 2. Підготовлюємо рейтинг заздалегідь
-  const ratingSchema = typeof place.rating === "number" && place.rating > 0
-    ? {
-        "@type": "AggregateRating" as const,
-        "ratingValue": place.rating.toFixed(1).toString(),
-        "reviewCount": place.reviews?.length.toString() || "1",
-        "bestRating": "5",
-        "worstRating": "1"
-      }
-    : undefined;
-
-  // 3. Збираємо фінальний об'єкт ОДРАЗУ цілим (це прибере помилку parent_node)
+  // 2. Збираємо об'єкт одним шматком
   const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
     "@type": getSchemaType(category),
@@ -220,57 +208,23 @@ export default async function PlacePage({ params }: Params) {
       "addressCountry": "UA"
     },
     "telephone": place.phone || undefined,
-    "geo": place.lat && place.lng ? {
+    "geo": (place.lat && place.lng) ? {
       "@type": "GeoCoordinates",
       "latitude": place.lat,
       "longitude": place.lng
     } : undefined,
     "hasMenu": place.menu ? `https://detruckavtsi.info/${category}/${slug}#menu` : undefined,
-    "aggregateRating": ratingSchema,
+    "aggregateRating": (typeof place.rating === "number" && place.rating > 0) ? {
+      "@type": "AggregateRating",
+      "ratingValue": place.rating.toFixed(1),
+      "reviewCount": (place.reviews?.length || 1).toString(),
+      "bestRating": "5",
+      "worstRating": "1"
+    } : undefined,
     "review": reviewsSchema
   };
 
-
-
-  if (place.phone) jsonLd.telephone = place.phone;
-
-  if (place.lat && place.lng) {
-    jsonLd.geo = {
-      "@type": "GeoCoordinates",
-      "latitude": place.lat,
-      "longitude": place.lng
-    };
-  }
-
-  if (place.menu) {
-    jsonLd.hasMenu = `https://detruckavtsi.info/${category}/${slug}#menu`;
-  }
-
-if (typeof place.rating === "number" && place.rating > 0) {
-  jsonLd.aggregateRating = {
-    "@type": "AggregateRating",
-    "ratingValue": place.rating.toFixed(1).toString(),
-    "reviewCount": place.reviews?.length.toString() || "1",
-    "bestRating": "5",
-    "worstRating": "1"
-  };
-}
-
-if (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0) {
-  jsonLd.review = (place.reviews as DatabaseReview[]).map((rev) => ({
-    "@type": "Review",
-    "author": {
-      "@type": "Person",
-      "name": rev.user || "Анонім"
-    },
-    "datePublished": rev.date || "2026-01-01",
-    "reviewBody": rev.text || "",
-    "reviewRating": {
-      "@type": "Rating",
-      "ratingValue": rev.rating ? rev.rating.toString() : "5"
-    }
-  }));
-}
+ 
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 text-black dark:text-white">
