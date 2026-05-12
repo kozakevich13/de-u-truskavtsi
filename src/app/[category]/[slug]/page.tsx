@@ -186,7 +186,13 @@ export default async function PlacePage({ params }: Params) {
         "reviewBody": rev.text || "",
         "reviewRating": {
           "@type": "Rating" as const,
-          "ratingValue": (rev.rating || 5).toString()
+          "ratingValue": (rev.rating || 5).toString(),
+          "bestRating": "5",
+          "worstRating": "1" // Додаємо ці поля сюди теж
+        },
+        "publisher": {
+          "@type": "Organization" as const,
+          "name": "Відкривай Трускавець"
         }
       }))
     : undefined;
@@ -224,7 +230,13 @@ export default async function PlacePage({ params }: Params) {
     "review": reviewsSchema
   };
 
- 
+ // Додай це прямо перед return
+ console.log("--- DEBUG JSON-LD START ---");
+ console.log("Place Name:", place.name);
+ console.log("Rating Type:", typeof place.rating, "Value:", place.rating);
+ console.log("Reviews Type:", Array.isArray(place.reviews) ? "Array" : typeof place.reviews);
+ console.log("Final JSON-LD:", JSON.stringify(jsonLd, null, 2));
+ console.log("--- DEBUG JSON-LD END ---");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 text-black dark:text-white">
