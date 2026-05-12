@@ -177,7 +177,7 @@ export default async function PlacePage({ params }: Params) {
   // Створюємо базовий об'єкт мікророзмітки без any
   const jsonLd: SchemaPlace = {
     "@context": "https://schema.org",
-    "@type": getSchemaType(category), // Тут має бути 'Restaurant' або 'Cafe'
+    "@type": getSchemaType(category),
     "name": place.name,
     "description": place.short_description || place.description,
     "image": mainImage,
@@ -208,20 +208,18 @@ export default async function PlacePage({ params }: Params) {
     jsonLd.hasMenu = `https://detruckavtsi.info/${category}/${slug}#menu`;
   }
 
-// Додаємо AggregateRating
 if (typeof place.rating === "number" && place.rating > 0) {
   jsonLd.aggregateRating = {
     "@type": "AggregateRating",
     "ratingValue": place.rating.toFixed(1).toString(),
-    "reviewCount": place.reviews?.length.toString() || "24",
+    "reviewCount": place.reviews?.length.toString() || "1",
     "bestRating": "5",
     "worstRating": "1"
   };
 }
 
-// ДОДАЄМО САМІ ВІДГУКИ (це виправить помилку з фото)
 if (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0) {
-  jsonLd.review = place.reviews.map((rev: DatabaseReview) => ({
+  jsonLd.review = (place.reviews as DatabaseReview[]).map((rev) => ({
     "@type": "Review",
     "author": {
       "@type": "Person",
@@ -231,7 +229,7 @@ if (place.reviews && Array.isArray(place.reviews) && place.reviews.length > 0) {
     "reviewBody": rev.text || "",
     "reviewRating": {
       "@type": "Rating",
-      "ratingValue": rev.rating // Можна витягувати реальну оцінку, якщо вона є в JSON
+      "ratingValue": rev.rating ? rev.rating.toString() : "5"
     }
   }));
 }
