@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Map as MapIcon } from "lucide-react";
+// Додаємо Newspaper іконку
+import { BookOpen, Map as MapIcon, Newspaper } from "lucide-react";
 
 export default function Header() {
   return (
@@ -25,13 +26,22 @@ export default function Header() {
         </Link>
 
         {/* Навігація */}
-        <div className="flex items-center gap-2 md:gap-6">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link 
             href="/" 
             className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
             <MapIcon size={18} />
             <span className="hidden md:inline">Карта</span>
+          </Link>
+
+          {/* НОВИЙ РОЗДІЛ: НОВИНИ */}
+          <Link 
+            href="/news" 
+            className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+          >
+            <Newspaper size={18} />
+            <span className="hidden md:inline">Новини</span>
           </Link>
           
           <Link 
