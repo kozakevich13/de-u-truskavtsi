@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-// Додаємо Newspaper іконку
-import { BookOpen, Map as MapIcon, Newspaper } from "lucide-react";
+// Додаємо HelpCircle
+import { BookOpen, Map as MapIcon, Newspaper, HelpCircle } from "lucide-react";
 
 export default function Header() {
   return (
@@ -26,22 +26,30 @@ export default function Header() {
         </Link>
 
         {/* Навігація */}
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-1 md:gap-4">
           <Link 
             href="/" 
             className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
             <MapIcon size={18} />
-            <span className="hidden md:inline">Карта</span>
+            <span className="hidden lg:inline">Карта</span>
           </Link>
 
-          {/* НОВИЙ РОЗДІЛ: НОВИНИ */}
           <Link 
             href="/news" 
             className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
             <Newspaper size={18} />
-            <span className="hidden md:inline">Новини</span>
+            <span className="hidden lg:inline">Новини</span>
+          </Link>
+
+          {/* НОВИЙ РОЗДІЛ: FAQ */}
+          <Link 
+            href="/faq" 
+            className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+          >
+            <HelpCircle size={18} />
+            <span className="hidden lg:inline">Питання</span>
           </Link>
           
           <Link 

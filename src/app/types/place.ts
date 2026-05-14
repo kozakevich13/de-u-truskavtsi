@@ -45,3 +45,17 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
+
+export interface FAQ {
+  id: number;
+  question: string;
+  answer: string;
+  category: string;
+  type: string;
+  slug: string;
+  created_at: string;
+}
+
+export interface FAQPageContentProps {
+  initialFaqs: FAQ[];
+}
