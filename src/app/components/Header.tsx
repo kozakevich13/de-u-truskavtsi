@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-// Додаємо HelpCircle
 import { BookOpen, Map as MapIcon, Newspaper, HelpCircle } from "lucide-react";
 
 export default function Header() {
@@ -26,41 +25,48 @@ export default function Header() {
         </Link>
 
         {/* Навігація */}
-        <div className="flex items-center gap-1 md:gap-4">
+        <div className="flex items-center gap-0.5 md:gap-4">
           <Link 
             href="/" 
-            className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 px-2 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
-            <MapIcon size={18} />
+            {/* Трішки зменшили іконку для мобільних */}
+            <MapIcon className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             <span className="hidden lg:inline">Карта</span>
           </Link>
 
           <Link 
             href="/news" 
-            className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 px-2 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
-            <Newspaper size={18} />
+            <NewsheetIcon className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             <span className="hidden lg:inline">Новини</span>
           </Link>
 
-          {/* НОВИЙ РОЗДІЛ: FAQ */}
+          {/* РОЗДІЛ: FAQ */}
           <Link 
             href="/faq" 
-            className="flex items-center gap-2 px-3 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center gap-2 px-2 py-2 text-sm font-bold uppercase tracking-tight text-zinc-600 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 transition-colors"
           >
-            <HelpCircle size={18} />
+            <HelpCircle className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             <span className="hidden lg:inline">Питання</span>
           </Link>
           
           <Link 
             href="/blog" 
-            className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-sm font-bold uppercase tracking-tight text-white hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-zinc-200 dark:shadow-none"
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 md:px-4 text-sm font-bold uppercase tracking-tight text-white hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-zinc-200 dark:shadow-none cursor-pointer"
           >
-            <BookOpen size={18} />
-            <span>Гід</span>
+            <BookOpen className="w-4 h-4 md:w-[18px] md:h-[18px]" />
+            {/* Слово Гід тепер ховається на мобільних пристроях */}
+            <span className="hidden sm:inline">Гід</span>
           </Link>
         </div>
       </div>
     </nav>
   );
+}
+
+// Допоміжний внутрішній компонент, щоб не ламався Newspaper імпорт
+function NewsheetIcon({ className }: { className?: string }) {
+  return <Newspaper className={className} />;
 }
