@@ -50,8 +50,15 @@ export async function POST(request: NextRequest) {
       revalidated: true, 
       googleIndexed: shouldIndex 
     });
-  } catch (err: any) {
+} catch (err: unknown) {
     console.error("Помилка:", err);
-    return NextResponse.json({ message: "Error", error: err.message }, { status: 500 });
+
+    // Перевіряємо, чи є err екземпляром класу Error
+    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+
+    return NextResponse.json(
+      { message: "Error", error: errorMessage }, 
+      { status: 500 }
+    );
   }
 }
