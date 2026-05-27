@@ -128,11 +128,19 @@ export async function POST(req: Request) {
     await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та додано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
     return NextResponse.json({ status: "success" });
 
-  } catch (error: any) {
-    console.error("🚨 Помилка:", error.message);
+} catch (error: unknown) {
+    // Безпечно витягуємо повідомлення про помилку
+    const errorMessage = error instanceof Error ? error.message : "Невідома помилка сервера";
+    
+    console.error("🚨 Помилка:", errorMessage);
+    
     if (chatId !== 0) {
-      await sendTelegramMessage(chatId, `❌ Сталася помилка під час обробки: ${error.message}`);
+      await sendTelegramMessage(
+        chatId, 
+        `❌ Сталася помилка під час обробки: ${errorMessage}`
+      );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
