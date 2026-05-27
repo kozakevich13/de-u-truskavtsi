@@ -94,11 +94,10 @@ export async function POST(req: Request) {
     }
 
     // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
-    console.log("[Gemini] Підготовка промпту та запуск запиту через офіційний SDK...");
+    console.log("[Gemini] Підготовка промпту та запуск запиту через нову модель gemini-2.5-flash...");
     
-    // Виправлено: Використовуємо глобальний клас GoogleGenAI, який імпортували вгорі
-    // Ініціалізуємо Google AI за допомогою правильного класу
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    // Ініціалізуємо стандартно (прибираємо apiVersion, щоб SDK сам вибрав робочий роут)
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     
     const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
     Текст для рерайту: ${cleanText}
@@ -114,14 +113,12 @@ const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
     let aiTextOutput = "";
     try {
-      // 1. Отримуємо модель
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-      // 2. Генеруємо контент
+      // ПЕРЕХОДИМО НА СУЧАСНУ МОДЕЛЬ gemini-2.5-flash
+      const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
       const responseFromGemini = await model.generateContent(prompt);
       
       aiTextOutput = responseFromGemini.response.text().trim();
-      console.log("[Gemini] Офіційне SDK успішно повернуло відповідь.");
+      console.log("[Gemini] Нова модель gemini-2.5-flash успішно повернула відповідь.");
     } catch (geminiSdkErr: unknown) {
       const sdkErrMsg = geminiSdkErr instanceof Error ? geminiSdkErr.message : "Помилка SDK";
       console.error(`[Gemini SDK Error] Збій запиту: ${sdkErrMsg}`);
