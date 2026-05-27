@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
-// Виправлено: Офіційний імпорт додано сюди, на самий початок файлу
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const supabase = createClient(
@@ -10,7 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Функція для відправки текстових повідомлень назад у Telegram
+// 1. Функція для відправки текстових повідомлень назад у Telegram
 async function sendTelegramMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   console.log(`[Telegram] Надсилання повідомлення до chatId: ${chatId}`);
@@ -26,6 +25,42 @@ async function sendTelegramMessage(chatId: number, text: string) {
   }
 }
 
+// 2. Функція для автопідбору фото через Unsplash (ВИНЕСЕНО СЮДИ)
+async function fetchUnsplashPhoto(keyword: string): Promise<string> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) {
+    console.warn("[Unsplash] Ключ UNSPLASH_ACCESS_KEY відсутній, використовуємо дефолтне фото");
+    return "/images/posts/default-truskavets.jpg";
+  }
+
+  try {
+    console.log(`[Unsplash] Пошук фото за ключовим словом: "${keyword}"`);
+    const res = await fetch(
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(keyword)}&orientation=landscape&client_id=${accessKey}`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      console.error(`[Unsplash] Помилка API: ${res.statusText}`);
+      return "/images/posts/default-truskavets.jpg";
+    }
+
+    const data = await res.json();
+    const imageUrl = data?.urls?.regular;
+    
+    if (imageUrl) {
+      console.log(`[Unsplash] Знайдено фото успішно: ${imageUrl}`);
+      return imageUrl;
+    }
+    
+    return "/images/posts/default-truskavets.jpg";
+  } catch (err) {
+    console.error("[Unsplash] Критична помилка запиту:", err);
+    return "/images/posts/default-truskavets.jpg";
+  }
+}
+
+// 3. ГОЛОВНИЙ ОБРОБНИК ВЕБХУКА
 export async function POST(req: Request) {
   let chatId = 0;
   try {
@@ -62,7 +97,7 @@ export async function POST(req: Request) {
 
     await sendTelegramMessage(chatId, "⏳ Посилання отримано! Починаю збір тексту та рерайтинг через Gemini...");
 
-    // 1. ПАРСИНГ ЗОВНІШНЬОГО САЙТУ
+    // Парсинг сайту
     console.log(`[Parser] Запуск axios для: ${incomingText}`);
     let response;
     try {
@@ -93,10 +128,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "parsing_failed" });
     }
 
-    // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
+    // Рерайтинг через Gemini
     console.log("[Gemini] Підготовка промпту та запуск запиту через нову модель gemini-2.5-flash...");
-    
-    // Ініціалізуємо стандартно (прибираємо apiVersion, щоб SDK сам вибрав робочий роут)
     const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     
     const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
@@ -108,15 +141,14 @@ export async function POST(req: Request) {
       "slug": "url-шлях-транслітом-через-дефіси",
       "excerpt": "короткий опис на 150 символів для мета-тегів",
       "keywords": "ключові слова через кому",
+      "image_keyword": "одне-два слова англійською мовою для пошуку фото в базі Unsplash, що ідеально підходить за змістом статті (наприклад: 'spa', 'hotel', 'forest', 'mineral-water', 'concert', 'cafe')",
       "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
     }`;
 
     let aiTextOutput = "";
     try {
-      // ПЕРЕХОДИМО НА СУЧАСНУ МОДЕЛЬ gemini-2.5-flash
       const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
       const responseFromGemini = await model.generateContent(prompt);
-      
       aiTextOutput = responseFromGemini.response.text().trim();
       console.log("[Gemini] Нова модель gemini-2.5-flash успішно повернула відповідь.");
     } catch (geminiSdkErr: unknown) {
@@ -145,12 +177,15 @@ export async function POST(req: Request) {
     try {
       parsedArticle = JSON.parse(aiTextOutput);
     } catch {
-      // Виправлено: Прибрали невикористану змінну parseError, щоб лінтер не сварився
       console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
       throw new Error("AI повернув невалідний формат тексту. Спробуйте ще раз.");
     }
 
     console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
+
+    // 2.5 ОДЕРЖАННЯ ФОТОГРАФІЇ
+    const keywordForPhoto = parsedArticle.image_keyword || "ukraine-city";
+    const autoImageUrl = await fetchUnsplashPhoto(keywordForPhoto);
 
     // 3. ЗБЕРЕЖЕННЯ В SUPABASE
     console.log("[Supabase] Спроба інсерту нового запису в таблицю posts...");
@@ -167,7 +202,7 @@ export async function POST(req: Request) {
           author_name: "ШІ-Гід",
           author_image: "[https://api.dicebear.com/7.x/avataaars/svg?seed=Felix](https://api.dicebear.com/7.x/avataaars/svg?seed=Felix)",
           is_published: false, 
-          image_url: "/images/posts/default-truskavets.jpg"
+          image_url: autoImageUrl 
         }
       ]);
 
