@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
+// Виправлено: Офіційний імпорт додано сюди, на самий початок файлу
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Функція для відправки текстових повідомлень назад у Telegram
 async function sendTelegramMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   console.log(`[Telegram] Надсилання повідомлення до chatId: ${chatId}`);
@@ -91,67 +94,66 @@ export async function POST(req: Request) {
     }
 
     // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
-    // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
-   // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
-   console.log("[Gemini] Підготовка промпту та запуск запиту через офіційний SDK...");
+    console.log("[Gemini] Підготовка промпту та запуск запиту через офіційний SDK...");
     
-   const { GoogleGenAI } = require("@google/generative-ai");
-   // Ініціалізуємо Google AI з твоїм ключем
-   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-   
-   const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
-   Текст для рерайту: ${cleanText}
+    // Виправлено: Використовуємо глобальний клас GoogleGenAI, який імпортували вгорі
+    // Ініціалізуємо Google AI за допомогою правильного класу
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    
+    const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
+    Текст для рерайту: ${cleanText}
 
-   Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта) з такими полями:
-   {
-     "title": "клікбейтний заголовок",
-     "slug": "url-шлях-транслітом-через-дефіси",
-     "excerpt": "короткий опис на 150 символів для мета-тегів",
-     "keywords": "ключові слова через кому",
-     "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
-   }`;
+    Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта) з такими полями:
+    {
+      "title": "клікбейтний заголовок",
+      "slug": "url-шлях-транслітом-через-дефіси",
+      "excerpt": "короткий опис на 150 символів для мета-тегів",
+      "keywords": "ключові слова через кому",
+      "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
+    }`;
 
-   let aiTextOutput = "";
-   try {
-     // Офіційний виклик моделі через SDK (він сам підбере робочий URL під капотом)
-     const responseFromGemini = await ai.models.generateContent({
-       model: "gemini-1.5-flash",
-       contents: prompt,
-     });
-     
-     aiTextOutput = responseFromGemini.text.trim();
-     console.log("[Gemini] Офіційне SDK успішно повернуло відповідь.");
-   } catch (geminiSdkErr: unknown) {
-     const sdkErrMsg = geminiSdkErr instanceof Error ? geminiSdkErr.message : "Помилка SDK";
-     console.error(`[Gemini SDK Error] Збій запиту: ${sdkErrMsg}`);
-     throw new Error(`Google Gemini SDK не зміг згенерувати контент. Деталі: ${sdkErrMsg}`);
-   }
+    let aiTextOutput = "";
+    try {
+      // 1. Отримуємо модель
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      // 2. Генеруємо контент
+      const responseFromGemini = await model.generateContent(prompt);
+      
+      aiTextOutput = responseFromGemini.response.text().trim();
+      console.log("[Gemini] Офіційне SDK успішно повернуло відповідь.");
+    } catch (geminiSdkErr: unknown) {
+      const sdkErrMsg = geminiSdkErr instanceof Error ? geminiSdkErr.message : "Помилка SDK";
+      console.error(`[Gemini SDK Error] Збій запиту: ${sdkErrMsg}`);
+      throw new Error(`Google Gemini SDK не зміг згенерувати контент. Деталі: ${sdkErrMsg}`);
+    }
 
-   if (!aiTextOutput) {
-     throw new Error("Google Gemini повернув порожній текст відповіді.");
-   }
-   
-   if (aiTextOutput.startsWith("```")) {
-     console.log("[Gemini] Виявлено маркдаун обгортку в тексті, очищаємо...");
-     aiTextOutput = aiTextOutput.replace(/^```json|```$/g, "").trim();
-   }
+    if (!aiTextOutput) {
+      throw new Error("Google Gemini повернув порожній текст відповіді.");
+    }
+    
+    if (aiTextOutput.startsWith("```")) {
+      console.log("[Gemini] Виявлено маркдаун обгортку в тексті, очищаємо...");
+      aiTextOutput = aiTextOutput.replace(/^```json|```$/g, "").trim();
+    }
 
-   const firstCurly = aiTextOutput.indexOf("{");
-   const lastCurly = aiTextOutput.lastIndexOf("}");
-   if (firstCurly !== -1 && lastCurly !== -1) {
-     aiTextOutput = aiTextOutput.slice(firstCurly, lastCurly + 1);
-   }
+    const firstCurly = aiTextOutput.indexOf("{");
+    const lastCurly = aiTextOutput.lastIndexOf("}");
+    if (firstCurly !== -1 && lastCurly !== -1) {
+      aiTextOutput = aiTextOutput.slice(firstCurly, lastCurly + 1);
+    }
 
-   console.log("[Gemini] Спроба парсингу вихідного JSON об'єкта статті");
-   let parsedArticle;
-   try {
-     parsedArticle = JSON.parse(aiTextOutput);
-   } catch (parseError) {
-     console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
-     throw new Error("AI повернув невалідний формат тексту. Спробуйте ще раз.");
-   }
+    console.log("[Gemini] Спроба парсингу вихідного JSON об'єкта статті");
+    let parsedArticle;
+    try {
+      parsedArticle = JSON.parse(aiTextOutput);
+    } catch {
+      // Виправлено: Прибрали невикористану змінну parseError, щоб лінтер не сварився
+      console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
+      throw new Error("AI повернув невалідний формат тексту. Спробуйте ще раз.");
+    }
 
-   console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
+    console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
 
     // 3. ЗБЕРЕЖЕННЯ В SUPABASE
     console.log("[Supabase] Спроба інсерту нового запису в таблицю posts...");
@@ -178,7 +180,7 @@ export async function POST(req: Request) {
     }
 
     console.log("[Supabase] Запис успішно створено. Відправляємо фінальний статус Шефу.");
-    await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та добано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
+    await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та додано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
     
     return NextResponse.json({ status: "success" });
 
@@ -193,8 +195,6 @@ export async function POST(req: Request) {
       );
     }
     
-    // КРИТИЧНО ДЛЯ TELEGRAM: Повертаємо 200 статус, щоб Telegram зрозумів, 
-    // що запит оброблено, і припинив надсилати його повторно.
     return NextResponse.json({ error: errorMessage, handled: true }, { status: 200 });
   }
 }
