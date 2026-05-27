@@ -91,6 +91,7 @@ export async function POST(req: Request) {
     }
 
     // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
+    // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
     console.log("[Gemini] Підготовка промпту та запуск запиту до Google AI Studio...");
     const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
     Текст для рерайту: ${cleanText}
@@ -104,14 +105,21 @@ export async function POST(req: Request) {
       "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
     }`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    console.log(`[Gemini] Надсилання запиту на ендпоінт: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash`);
+    // Залізобетонний URL для безкоштовних ключів Gemini 1.5 Flash
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    console.log(`[Gemini] Надсилання запиту на стабільний ендпоінт: v1beta/models/gemini-1.5-flash`);
     
     const geminiResponse = await fetch(geminiUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json" 
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [
+          { 
+            parts: [{ text: prompt }] 
+          }
+        ]
       })
     });
 
