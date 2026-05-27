@@ -104,7 +104,6 @@ export async function POST(req: Request) {
       "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
     }`;
 
-    // Використовуємо перевірений v1beta ендпоінт, який стабільно працює з безкоштовними токенами
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     console.log(`[Gemini] Надсилання запиту на ендпоінт: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash`);
     
@@ -125,6 +124,11 @@ export async function POST(req: Request) {
     const geminiData = await geminiResponse.json();
     console.log("[Gemini] Успішна відповідь від Google отримано.");
     
+    if (!geminiData?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error("[Gemini] Неочікувана структура відповіді:", JSON.stringify(geminiData));
+      throw new Error("Google Gemini повернув порожню відповідь або некоректну структуру даних.");
+    }
+
     let aiTextOutput = geminiData.candidates[0].content.parts[0].text.trim();
     
     if (aiTextOutput.startsWith("```")) {
@@ -132,8 +136,22 @@ export async function POST(req: Request) {
       aiTextOutput = aiTextOutput.replace(/^```json|```$/g, "").trim();
     }
 
+    const firstCurly = aiTextOutput.indexOf("{");
+    const lastCurly = aiTextOutput.lastIndexOf("}");
+    if (firstCurly !== -1 && lastCurly !== -1) {
+      aiTextOutput = aiTextOutput.slice(firstCurly, lastCurly + 1);
+    }
+
     console.log("[Gemini] Спроба парсингу вихідного JSON об'єкта статті");
-    const parsedArticle = JSON.parse(aiTextOutput);
+    
+    let parsedArticle;
+    try {
+      parsedArticle = JSON.parse(aiTextOutput);
+    } catch (parseError) {
+      console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
+      throw new Error("AI повернув текст замість структурованого JSON. Можливо, сервіс перевантажений. Спробуйте ще раз за хвилину.");
+    }
+
     console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
 
     // 3. ЗБЕРЕЖЕННЯ В SUPABASE
@@ -161,7 +179,7 @@ export async function POST(req: Request) {
     }
 
     console.log("[Supabase] Запис успішно створено. Відправляємо фінальний статус Шефу.");
-    await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та додано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
+    await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та добано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
     
     return NextResponse.json({ status: "success" });
 
@@ -176,6 +194,8 @@ export async function POST(req: Request) {
       );
     }
     
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    // КРИТИЧНО ДЛЯ TELEGRAM: Повертаємо 200 статус, щоб Telegram зрозумів, 
+    // що запит оброблено, і припинив надсилати його повторно.
+    return NextResponse.json({ error: errorMessage, handled: true }, { status: 200 });
   }
 }
