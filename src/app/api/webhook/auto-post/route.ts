@@ -92,75 +92,66 @@ export async function POST(req: Request) {
 
     // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
     // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
-    console.log("[Gemini] Підготовка промпту та запуск запиту до Google AI Studio...");
-    const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
-    Текст для рерайту: ${cleanText}
-
-    Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта) з такими полями:
-    {
-      "title": "клікбейтний заголовок",
-      "slug": "url-шлях-транслітом-через-дефіси",
-      "excerpt": "короткий опис на 150 символів для мета-тегів",
-      "keywords": "ключові слова через кому",
-      "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
-    }`;
-
-    // Залізобетонний URL для безкоштовних ключів Gemini 1.5 Flash
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    console.log(`[Gemini] Надсилання запиту на стабільний ендпоінт: v1beta/models/gemini-1.5-flash`);
+   // 2. РЕРАЙТИНГ ЧЕРЕЗ GEMINI API
+   console.log("[Gemini] Підготовка промпту та запуск запиту через офіційний SDK...");
     
-    const geminiResponse = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json" 
-      },
-      body: JSON.stringify({
-        contents: [
-          { 
-            parts: [{ text: prompt }] 
-          }
-        ]
-      })
-    });
+   const { GoogleGenAI } = require("@google/generative-ai");
+   // Ініціалізуємо Google AI з твоїм ключем
+   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+   
+   const prompt = `Ти — експерт із SEO-копірайтингу та локальний гід по Трускавцю. Твоє завдання: взяти цей текст новини та повністю перефразувати його українською мовою. Зроби статтю унікальною, з емоційними тригерами, клікбейтною, але збережи оригінальні факти.
+   Текст для рерайту: ${cleanText}
 
-    if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
-      console.error(`[Gemini] Статус помилки: ${geminiResponse.status}. Текст відповіді: ${errText}`);
-      throw new Error(`Gemini API повернув статус ${geminiResponse.status}: ${geminiResponse.statusText}`);
-    }
+   Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта) з такими полями:
+   {
+     "title": "клікбейтний заголовок",
+     "slug": "url-шлях-транслітом-через-дефіси",
+     "excerpt": "короткий опис на 150 символів для мета-тегів",
+     "keywords": "ключові слова через кому",
+     "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
+   }`;
 
-    const geminiData = await geminiResponse.json();
-    console.log("[Gemini] Успішна відповідь від Google отримано.");
-    
-    if (!geminiData?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error("[Gemini] Неочікувана структура відповіді:", JSON.stringify(geminiData));
-      throw new Error("Google Gemini повернув порожню відповідь або некоректну структуру даних.");
-    }
+   let aiTextOutput = "";
+   try {
+     // Офіційний виклик моделі через SDK (він сам підбере робочий URL під капотом)
+     const responseFromGemini = await ai.models.generateContent({
+       model: "gemini-1.5-flash",
+       contents: prompt,
+     });
+     
+     aiTextOutput = responseFromGemini.text.trim();
+     console.log("[Gemini] Офіційне SDK успішно повернуло відповідь.");
+   } catch (geminiSdkErr: unknown) {
+     const sdkErrMsg = geminiSdkErr instanceof Error ? geminiSdkErr.message : "Помилка SDK";
+     console.error(`[Gemini SDK Error] Збій запиту: ${sdkErrMsg}`);
+     throw new Error(`Google Gemini SDK не зміг згенерувати контент. Деталі: ${sdkErrMsg}`);
+   }
 
-    let aiTextOutput = geminiData.candidates[0].content.parts[0].text.trim();
-    
-    if (aiTextOutput.startsWith("```")) {
-      console.log("[Gemini] Виявлено маркдаун обгортку в тексті, очищаємо...");
-      aiTextOutput = aiTextOutput.replace(/^```json|```$/g, "").trim();
-    }
+   if (!aiTextOutput) {
+     throw new Error("Google Gemini повернув порожній текст відповіді.");
+   }
+   
+   if (aiTextOutput.startsWith("```")) {
+     console.log("[Gemini] Виявлено маркдаун обгортку в тексті, очищаємо...");
+     aiTextOutput = aiTextOutput.replace(/^```json|```$/g, "").trim();
+   }
 
-    const firstCurly = aiTextOutput.indexOf("{");
-    const lastCurly = aiTextOutput.lastIndexOf("}");
-    if (firstCurly !== -1 && lastCurly !== -1) {
-      aiTextOutput = aiTextOutput.slice(firstCurly, lastCurly + 1);
-    }
+   const firstCurly = aiTextOutput.indexOf("{");
+   const lastCurly = aiTextOutput.lastIndexOf("}");
+   if (firstCurly !== -1 && lastCurly !== -1) {
+     aiTextOutput = aiTextOutput.slice(firstCurly, lastCurly + 1);
+   }
 
-    console.log("[Gemini] Спроба парсингу вихідного JSON об'єкта статті");
-    
-    let parsedArticle;
-    try {
-      parsedArticle = JSON.parse(aiTextOutput);
-    } catch (parseError) {
-      console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
-      throw new Error("AI повернув текст замість структурованого JSON. Можливо, сервіс перевантажений. Спробуйте ще раз за хвилину.");
-    }
+   console.log("[Gemini] Спроба парсингу вихідного JSON об'єкта статті");
+   let parsedArticle;
+   try {
+     parsedArticle = JSON.parse(aiTextOutput);
+   } catch (parseError) {
+     console.error("[Gemini] Помилка парсингу тексту:", aiTextOutput);
+     throw new Error("AI повернув невалідний формат тексту. Спробуйте ще раз.");
+   }
 
-    console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
+   console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
 
     // 3. ЗБЕРЕЖЕННЯ В SUPABASE
     console.log("[Supabase] Спроба інсерту нового запису в таблицю posts...");
