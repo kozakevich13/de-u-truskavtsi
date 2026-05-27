@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       "content": "текст статті виключно в HTML форматі. Кожен абзац загорни в <p>, підзаголовки в <h3>, списки в <ul><li>. Важливі акценти — <strong>. Без знаків переносу рядків \\n."
     }`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     console.log(`[Gemini] Надсилання запиту на ендпоінт: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash`);
     
     const geminiResponse = await fetch(geminiUrl, {
