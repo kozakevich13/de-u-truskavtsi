@@ -27,38 +27,57 @@ async function sendTelegramMessage(chatId: number, text: string) {
 
 // 2. Функція для автопідбору фото через Unsplash (ВИНЕСЕНО СЮДИ)
 async function fetchUnsplashPhoto(keyword: string): Promise<string> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) {
-    console.warn("[Unsplash] Ключ UNSPLASH_ACCESS_KEY відсутній, використовуємо дефолтне фото");
-    return "/images/posts/default-truskavets.jpg";
-  }
-
-  try {
-    console.log(`[Unsplash] Пошук фото за ключовим словом: "${keyword}"`);
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(keyword)}&orientation=landscape&client_id=${accessKey}`,
-      { method: "GET" }
-    );
-
-    if (!res.ok) {
-      console.error(`[Unsplash] Помилка API: ${res.statusText}`);
+    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+    if (!accessKey) {
+      console.warn("[Unsplash] Ключ UNSPLASH_ACCESS_KEY відсутній, використовуємо дефолтне фото");
       return "/images/posts/default-truskavets.jpg";
     }
-
-    const data = await res.json();
-    const imageUrl = data?.urls?.regular;
-    
-    if (imageUrl) {
-      console.log(`[Unsplash] Знайдено фото успішно: ${imageUrl}`);
-      return imageUrl;
+  
+    try {
+      // Формуємо точний пошуковий запит із прив'язкою до нашого регіону.
+      // Наприклад, якщо Gemini видав "hotel", запит буде: "Truskavets Carpathians hotel"
+      const refinedQuery = `Truskavets Carpathians ${keyword}`;
+      console.log(`[Unsplash] Точний пошук за запитом: "${refinedQuery}"`);
+      
+      // Додаємо refinedQuery у fetch
+      const res = await fetch(
+        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(refinedQuery)}&orientation=landscape&client_id=${accessKey}`,
+        { method: "GET" }
+      );
+  
+      if (!res.ok) {
+        console.error(`[Unsplash] Помилка API: ${res.statusText}`);
+        
+        // СТРАХОВКА: Якщо за трьома словами нічого не знайшло (буває дуже рідкісне слово),
+        // робимо запасний ширший запит суворо по місту
+        console.log("[Unsplash] Спроба зробити більш широкий запасний запит...");
+        const fallbackRes = await fetch(
+          `https://api.unsplash.com/photos/random?query=Truskavets&orientation=landscape&client_id=${accessKey}`,
+          { method: "GET" }
+        );
+        
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          return fallbackData?.urls?.regular || "/images/posts/default-truskavets.jpg";
+        }
+  
+        return "/images/posts/default-truskavets.jpg";
+      }
+  
+      const data = await res.json();
+      const imageUrl = data?.urls?.regular;
+      
+      if (imageUrl) {
+        console.log(`[Unsplash] Знайдено точне фото успішно: ${imageUrl}`);
+        return imageUrl;
+      }
+      
+      return "/images/posts/default-truskavets.jpg";
+    } catch (err) {
+      console.error("[Unsplash] Критична помилка запиту:", err);
+      return "/images/posts/default-truskavets.jpg";
     }
-    
-    return "/images/posts/default-truskavets.jpg";
-  } catch (err) {
-    console.error("[Unsplash] Критична помилка запиту:", err);
-    return "/images/posts/default-truskavets.jpg";
   }
-}
 
 // 3. ГОЛОВНИЙ ОБРОБНИК ВЕБХУКА
 export async function POST(req: Request) {
@@ -199,8 +218,8 @@ export async function POST(req: Request) {
           content: parsedArticle.content,
           keywords: parsedArticle.keywords,
           category: "Новини",
-          author_name: "ШІ-Гід",
-          author_image: "[https://api.dicebear.com/7.x/avataaars/svg?seed=Felix](https://api.dicebear.com/7.x/avataaars/svg?seed=Felix)",
+          author_name: "Гід",
+          author_image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
           is_published: false, 
           image_url: autoImageUrl 
         }
