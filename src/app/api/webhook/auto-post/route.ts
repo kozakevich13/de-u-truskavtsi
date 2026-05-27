@@ -220,7 +220,7 @@ export async function POST(req: Request) {
           category: "Новини",
           author_name: "Гід",
           author_image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
-          is_published: false, 
+          is_published: true, 
           image_url: autoImageUrl 
         }
       ]);
