@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+// Додаємо імпорт для індексації Google
+import { google } from "googleapis";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,61 +27,88 @@ async function sendTelegramMessage(chatId: number, text: string) {
   }
 }
 
-// 2. Функція для автопідбору фото через Unsplash (ВИНЕСЕНО СЮДИ)
+// 2. Функція для автопідбору фото через Unsplash
 async function fetchUnsplashPhoto(keyword: string): Promise<string> {
-    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (!accessKey) {
-      console.warn("[Unsplash] Ключ UNSPLASH_ACCESS_KEY відсутній, використовуємо дефолтне фото");
-      return "/images/posts/default-truskavets.jpg";
-    }
-  
-    try {
-      // Формуємо точний пошуковий запит із прив'язкою до нашого регіону.
-      // Наприклад, якщо Gemini видав "hotel", запит буде: "Truskavets Carpathians hotel"
-      const refinedQuery = `Truskavets Carpathians ${keyword}`;
-      console.log(`[Unsplash] Точний пошук за запитом: "${refinedQuery}"`);
-      
-      // Додаємо refinedQuery у fetch
-      const res = await fetch(
-        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(refinedQuery)}&orientation=landscape&client_id=${accessKey}`,
-        { method: "GET" }
-      );
-  
-      if (!res.ok) {
-        console.error(`[Unsplash] Помилка API: ${res.statusText}`);
-        
-        // СТРАХОВКА: Якщо за трьома словами нічого не знайшло (буває дуже рідкісне слово),
-        // робимо запасний ширший запит суворо по місту
-        console.log("[Unsplash] Спроба зробити більш широкий запасний запит...");
-        const fallbackRes = await fetch(
-          `https://api.unsplash.com/photos/random?query=Truskavets&orientation=landscape&client_id=${accessKey}`,
-          { method: "GET" }
-        );
-        
-        if (fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
-          return fallbackData?.urls?.regular || "/images/posts/default-truskavets.jpg";
-        }
-  
-        return "/images/posts/default-truskavets.jpg";
-      }
-  
-      const data = await res.json();
-      const imageUrl = data?.urls?.regular;
-      
-      if (imageUrl) {
-        console.log(`[Unsplash] Знайдено точне фото успішно: ${imageUrl}`);
-        return imageUrl;
-      }
-      
-      return "/images/posts/default-truskavets.jpg";
-    } catch (err) {
-      console.error("[Unsplash] Критична помилка запиту:", err);
-      return "/images/posts/default-truskavets.jpg";
-    }
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) {
+    console.warn("[Unsplash] Ключ UNSPLASH_ACCESS_KEY відсутній, використовуємо дефолтне фото");
+    return "/images/posts/default-truskavets.jpg";
   }
 
-// 3. ГОЛОВНИЙ ОБРОБНИК ВЕБХУКА
+  try {
+    const refinedQuery = `Truskavets Carpathians ${keyword}`;
+    console.log(`[Unsplash] Точний пошук за запитом: "${refinedQuery}"`);
+    
+    const res = await fetch(
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(refinedQuery)}&orientation=landscape&client_id=${accessKey}`,
+      { method: "GET" }
+    );
+
+    if (!res.ok) {
+      console.error(`[Unsplash] Помилка API: ${res.statusText}`);
+      console.log("[Unsplash] Спроба зробити більш широкий запасний запит...");
+      const fallbackRes = await fetch(
+        `https://api.unsplash.com/photos/random?query=Truskavets&orientation=landscape&client_id=${accessKey}`,
+        { method: "GET" }
+      );
+      
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        return fallbackData?.urls?.regular || "/images/posts/default-truskavets.jpg";
+      }
+
+      return "/images/posts/default-truskavets.jpg";
+    }
+
+    const data = await res.json();
+    const imageUrl = data?.urls?.regular;
+    
+    if (imageUrl) {
+      console.log(`[Unsplash] Знайдено точне фото успішно: ${imageUrl}`);
+      return imageUrl;
+    }
+    
+    return "/images/posts/default-truskavets.jpg";
+  } catch (err) {
+    console.error("[Unsplash] Критична помилка запиту:", err);
+    return "/images/posts/default-truskavets.jpg";
+  }
+}
+
+// 3. Функція автоматичного надсилання URL в Google Indexing API
+async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log(`[Indexing API] Підготовка до відправки URL: ${targetUrl}`);
+    
+    // Формуємо авторизацію через змінні оточення ключа
+    const auth = new google.auth.JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      scopes: ["https://www.googleapis.com/auth/indexing"]
+    });
+
+    const indexing = google.indexing({
+      version: "v3",
+      auth: auth,
+    });
+
+    const response = await indexing.urlNotifications.publish({
+      requestBody: {
+        url: targetUrl,
+        type: "URL_UPDATED", // Сповіщення про додавання або оновлення контенту
+      },
+    });
+
+    console.log("[Indexing API] Відповідь Google успішна:", response.data);
+    return { success: true, message: "URL успішно надіслано в чергу індексації Google!" };
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Невідома помилка індексації";
+    console.error("[Indexing API] Помилка запиту до Google:", errMsg);
+    return { success: false, message: errMsg };
+  }
+}
+
+// 4. ГОЛОВНИЙ ОБРОБНИК ВЕБХУКА
 export async function POST(req: Request) {
   let chatId = 0;
   try {
@@ -202,25 +231,27 @@ export async function POST(req: Request) {
 
     console.log(`[Gemini] Результат успішно розпарсено. Заголовок: "${parsedArticle.title}"`);
 
-    // 2.5 ОДЕРЖАННЯ ФОТОГРАФІЇ
+    // Одержання фотографії
     const keywordForPhoto = parsedArticle.image_keyword || "ukraine-city";
     const autoImageUrl = await fetchUnsplashPhoto(keywordForPhoto);
 
-    // 3. ЗБЕРЕЖЕННЯ В SUPABASE
+    // Збереження в Supabase
     console.log("[Supabase] Спроба інсерту нового запису в таблицю posts...");
+    const uniqueSlug = parsedArticle.slug + "-" + Date.now().toString().slice(-4);
+    
     const { error: dbError } = await supabase
       .from("posts")
       .insert([
         {
           title: parsedArticle.title,
-          slug: parsedArticle.slug + "-" + Date.now().toString().slice(-4), 
+          slug: uniqueSlug, 
           excerpt: parsedArticle.excerpt,
           content: parsedArticle.content,
           keywords: parsedArticle.keywords,
           category: "Новини",
           author_name: "Гід",
-          author_image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
-          is_published: true, 
+          author_image: "[https://api.dicebear.com/7.x/avataaars/svg?seed=Felix](https://api.dicebear.com/7.x/avataaars/svg?seed=Felix)",
+          is_published: true, // Оскільки ми відправляємо в індексацію, стаття має бути опублікована одразу!
           image_url: autoImageUrl 
         }
       ]);
@@ -230,8 +261,26 @@ export async function POST(req: Request) {
       throw dbError;
     }
 
-    console.log("[Supabase] Запис успішно створено. Відправляємо фінальний статус Шефу.");
-    await sendTelegramMessage(chatId, `🎉 *Успіх!* Статтю "${parsedArticle.title}" успішно згенеровано та додано в чернетки Supabase. Зайдіть в адмінку, щоб підтвердити публікацію!`);
+    console.log("[Supabase] Запис успішно створено. Запуск автоматичної індексації...");
+    
+    // Формуємо фінальний лінк на нову статтю на твоєму сайті
+    const deployedArticleUrl = `https://detruckavtsi.info/news/${uniqueSlug}`;
+    
+    // Викликаємо Google Indexing API
+    const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
+    
+    // Відправляємо Шефу детальний фінальний звіт у Telegram
+    if (indexingResult.success) {
+      await sendTelegramMessage(
+        chatId, 
+        `🎉 *Успіх!* Статтю успішно опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати статтю](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ✅ Успішно надіслано в чергу індексації Google Search! Роботи вже летять сканувати.`
+      );
+    } else {
+      await sendTelegramMessage(
+        chatId, 
+        `⚠️ *Статтю створено, але виникла помилка індексації Google:*\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати статтю](${deployedArticleUrl})\n\n❌ *Помилка Google:* \`${indexingResult.message}\`\n_(Перевірте, чи додано сервісний акаунт як OWNER у вашому Google Search Console)_`
+      );
+    }
     
     return NextResponse.json({ status: "success" });
 
