@@ -19,12 +19,13 @@ export async function GET() {
 
     // 2. Команда сервісному акаунту примусово підтвердити права на домен
     // 2. Команда сервісному акаунту примусово підтвердити права на домен
+    // 2. Команда сервісному акаунту примусово підтвердити права на домен
     const response = await verification.webResource.insert({
-        verificationMethod: "DNS_TXT", 
+        verificationMethod: "FILE", // Змінили на FILE — це змусить Google просто перевірити родинні зв'язки з твоїм головним акаунтом
         requestBody: {
           site: {
-            identifier: "detruckavtsi.info", // ПРИБРАЛИ sc-domain: лишили тільки чистий домен!
-            type: "INET_DOMAIN"
+            identifier: "https://detruckavtsi.info/", // Вказуємо повну адресу сайту
+            type: "SITE" // Тип ресурсу для цього методу має бути SITE
           }
         }
       });
