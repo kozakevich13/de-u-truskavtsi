@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabase } from "../../lib/supabase"; 
-import { Calendar, User, ChevronLeft, Clock } from "lucide-react";
+import { Calendar, ChevronLeft, Clock } from "lucide-react";
 import Link from "next/link";
+// Імпортуємо оптимізований компонент Image від Next.js
+import Image from "next/image";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -116,9 +118,13 @@ export default async function PostPage({ params }: Props) {
             {post.image_url && (
               <div className="w-full md:w-1/2 flex-shrink-0">
                 <div className="overflow-hidden rounded-[32px] shadow-2xl shadow-blue-500/10 border border-zinc-100 dark:border-zinc-800">
-                  <img 
+                  {/* Головне зображення статті замінено на <Image /> */}
+                  <Image 
                     src={post.image_url} 
                     alt={post.title} 
+                    width={800}
+                    height={600}
+                    priority // Завантажується миттєво (без lazy-load), бо це LCP контент
                     className="w-full h-full object-cover aspect-[4/3] hover:scale-105 transition-transform duration-700" 
                   />
                 </div>
@@ -131,8 +137,17 @@ export default async function PostPage({ params }: Props) {
                </p>
                
                <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center gap-4">
-                  <div className="h-12 w-12 overflow-hidden rounded-full ring-2 ring-blue-600/20 bg-zinc-100">
-                    <img src={post.author_image} alt={post.author_name} className="h-full w-full object-cover" />
+                  <div className="h-12 w-12 overflow-hidden rounded-full ring-2 ring-blue-600/20 bg-zinc-100 relative">
+                    {/* Аватарка автора замінена на <Image /> */}
+                    {post.author_image && (
+                      <Image 
+                        src={post.author_image} 
+                        alt={post.author_name} 
+                        width={48}
+                        height={48}
+                        className="h-full w-full object-cover" 
+                      />
+                    )}
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest text-blue-600">{post.author_name}</p>
@@ -143,7 +158,7 @@ export default async function PostPage({ params }: Props) {
           </div>
         </header>
 
-        {/* Основний контент з налаштованими відступами та списками */}
+        {/* Основний контент */}
         <div 
           className="prose prose-zinc max-w-none dark:prose-invert 
           prose-p:mb-10 prose-p:text-zinc-800 dark:prose-p:text-zinc-200
