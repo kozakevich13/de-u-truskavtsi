@@ -34,12 +34,15 @@ h1 {
   font-weight: 800;
 }
 h3{
+  font-size:36px;
   margin-top: 10px;
   margin-bottom: 2px;
 }
 p{
-  margin-left: 17px;
+  font-size:20px;
 }
-li{
-  margin-left: 17px;
+li {
+  font-size: 20px;
+  font-style: italic; /* Робить шрифт похилим (курсивом) */
+  margin-top: 10px;
 }

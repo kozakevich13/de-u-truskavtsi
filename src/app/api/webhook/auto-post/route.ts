@@ -256,7 +256,7 @@ export async function POST(req: Request) {
           keywords: parsedArticle.keywords,
           category: "Новини",
           author_name: "Гід",
-          author_image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+          author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
           is_published: true, // Оскільки ми відправляємо в індексацію, стаття має бути опублікована одразу!
           image_url: autoImageUrl 
         }
