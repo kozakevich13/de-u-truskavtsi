@@ -18,15 +18,16 @@ export async function GET() {
     const verification = google.siteVerification({ version: "v1", auth });
 
     // 2. Команда сервісному акаунту примусово підтвердити права на домен
+    // 2. Команда сервісному акаунту примусово підтвердити права на домен
     const response = await verification.webResource.insert({
-      verificationMethod: "DNS_TXT", // Використовуємо метод, яким ти вже підтвердив домен
-      requestBody: {
-        site: {
-          identifier: "sc-domain:detruckavtsi.info", // Твій домен у Search Console
-          type: "INET_DOMAIN"
+        verificationMethod: "DNS_TXT", 
+        requestBody: {
+          site: {
+            identifier: "detruckavtsi.info", // ПРИБРАЛИ sc-domain: лишили тільки чистий домен!
+            type: "INET_DOMAIN"
+          }
         }
-      }
-    });
+      });
 
     return NextResponse.json({ 
       success: true, 
