@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
-
+interface GoogleApiError {
+    message?: string;
+    response?: {
+      data?: Record<string, unknown>;
+    };
+  }
 export async function GET() {
   try {
     // 1. Авторизація через твої нові ключі з Vercel Env
@@ -32,11 +37,8 @@ export async function GET() {
 } catch (error: unknown) {
     console.error("Помилка верифікації:", error);
     
-    // Приводимо до типу звичайного об'єкта або помилки Axios/Google API, щоб безпечно читати властивості
-    const err = error as { 
-      message?: string; 
-      response?: { data?: any } 
-    };
+    // Кастимо до нашого безпечного інтерфейсу
+    const err = error as GoogleApiError;
 
     return NextResponse.json({ 
       success: false, 
