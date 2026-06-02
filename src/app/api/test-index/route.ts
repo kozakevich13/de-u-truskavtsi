@@ -29,12 +29,19 @@ export async function GET() {
       data: response.data 
     });
 
-  } catch (error: any) {
+} catch (error: unknown) {
     console.error("Помилка верифікації:", error);
+    
+    // Приводимо до типу звичайного об'єкта або помилки Axios/Google API, щоб безпечно читати властивості
+    const err = error as { 
+      message?: string; 
+      response?: { data?: any } 
+    };
+
     return NextResponse.json({ 
       success: false, 
-      error: error.message,
-      details: error.response?.data || "Немає деталей"
+      error: err.message || "Невідома помилка",
+      details: err.response?.data || "Немає деталей"
     }, { status: 500 });
   }
 }
