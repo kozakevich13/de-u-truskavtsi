@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Використовуємо Promise.all, щоб зробити всі запити до бази одночасно (це набагато швидше)
   const [placesResponse, postsResponse, newsResponse] = await Promise.all([
     supabase.from('places').select('slug, category, created_at'),
-    supabase.from('posts').select('slug, created_at'),
+    supabase.from('posts').select('slug, created_at'), // Тягнемо дані з таблиці posts
     supabase.from('news').select('slug, created_at')
   ])
 
@@ -24,10 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  // 2. Формуємо лінки для блогових статей (posts) -> урл: /posts/slug
-  // (Якщо у тебе на фронтенді інший префікс, наприклад /blog/, то зміни його нижче)
+  // 2. Формуємо лінки для блогових статей -> дані з `posts`, але URL через `/blog/slug`
   const postEntries = (postsResponse.data || []).map((post) => ({
-    url: `${baseUrl}/posts/${post.slug}`,
+    url: `${baseUrl}/blog/${post.slug}`, // Змінено префікс з /posts/ на /blog/
     lastModified: new Date(post.created_at),
     changeFrequency: 'weekly' as const,
     priority: 0.7,
@@ -37,20 +36,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const newsEntries = (newsResponse.data || []).map((item) => ({
     url: `${baseUrl}/news/${item.slug}`,
     lastModified: new Date(item.created_at),
-    changeFrequency: 'daily' as const, // новини зазвичай оновлюються частіше
+    changeFrequency: 'daily' as const,
     priority: 0.7,
   }))
 
-  // 4. Статичні сторінки (головна тощо)
+  // 4. Статичні сторінки (головна, архіви блогу та новин)
   const staticEntries: MetadataRoute.Sitemap = [
     {
-      url: `${baseUrl}/blog`, // сторінка зі списком усіх статей блогу
+      url: baseUrl, // Головна сторінка сайту (додано для повноти мапи)
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/blog`, // Сторінка зі списком усіх статей блогу
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/news`, // сторінка зі списком усіх новин
+      url: `${baseUrl}/news`, // Сторінка зі списком усіх новин
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
       priority: 0.8,
