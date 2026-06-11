@@ -136,19 +136,22 @@ async function runDailyAutoGeneration() {
   const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
   let responseFromGemini;
   let aiTextOutput = "";
-
-  // Паттерн Retry: робимо до 3 спроб, якщо Google видає помилку 503
+  
+  // Паттерн Retry: робимо до 3 спроб, якщо Google віддає 503
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       responseFromGemini = await model.generateContent(prompt);
       aiTextOutput = responseFromGemini.response.text().trim();
-      break; // Якщо запит успішний — виходимо з циклу
-    } catch (geminiErr: any) {
-      console.warn(`[Gemini] Спроба ${attempt} провалилася. Помилка: ${geminiErr.message}`);
+      break; // Якщо запит успішний — виходимо з циклу спроб
+    } catch (geminiErr: unknown) {
+      const errorWithDetailedMessage = geminiErr instanceof Error ? geminiErr.message : "Unknown Gemini Error";
+      console.warn(`[Gemini] Спроба ${attempt} провалилася. Помилка: ${errorWithDetailedMessage}`);
+      
       if (attempt === maxRetries) {
         throw new Error(`Google Gemini SDK не зміг відповісти після ${maxRetries} спроб через перевантаження серверів.`);
       }
+      
       // Чекаємо 4 секунди перед наступною спробою
       await new Promise((resolve) => setTimeout(resolve, 4000));
     }
