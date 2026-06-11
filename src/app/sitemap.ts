@@ -44,13 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 4. Статичні сторінки (головна тощо)
   const staticEntries: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/posts`, // сторінка зі списком усіх статей блогу
+      url: `${baseUrl}/blog`, // сторінка зі списком усіх статей блогу
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
       priority: 0.8,
