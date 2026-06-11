@@ -26,23 +26,6 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-weight: 700; 
   letter-spacing: -0.02em;
 }
 
-h1 {
-  font-weight: 800;
-}
-h3{
-  font-size:36px;
-  margin-top: 10px;
-  margin-bottom: 2px;
-}
-p{
-  font-size:20px;
-}
-li {
-  font-size: 20px;
-  font-style: italic; /* Робить шрифт похилим (курсивом) */
-  margin-top: 10px;
-}
