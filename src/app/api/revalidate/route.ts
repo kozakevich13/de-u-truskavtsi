@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { google } from "googleapis";
+import { JWT } from "google-auth-library"; // 👈 Переходимо на легку бібліотеку авторизації
 
-// Налаштовуємо клієнт Google за допомогою даних із JSON-ключа
-// Налаштовуємо клієнт Google через об'єкт конфігурації
-const jwtClient = new google.auth.JWT({
-    email: process.env.GOOGLE_CLIENT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Фікс для переносів рядків у Vercel
-    scopes: ["https://www.googleapis.com/auth/indexing"],
-  });
+export const runtime = "nodejs"; // 👈 Критично важливо! Змушує Vercel використовувати повне серверне залізо Node.js
+
+// Інтерфейс для безпечної типізації помилок від API Google
+interface GoogleApiErrorResponse {
+  response?: {
+    data?: unknown;
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +22,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { record, type } = body; // record містить нові дані рядка, type — 'INSERT', 'UPDATE' або 'DELETE'
 
-    // 1. Скидаємо кеш у Next.js (це працює для будь-яких дій: INSERT, UPDATE, DELETE)
+    console.log(`[Webhook] Отримано подію ${type} від Supabase для блогу.`);
+
+    // 1. Скидаємо кеш у Next.js (працює для будь-яких дій)
     revalidatePath("/blog", "page");
     revalidatePath("/blog/[slug]", "page");
 
@@ -29,32 +32,59 @@ export async function POST(request: NextRequest) {
     const shouldIndex = (type === "INSERT" || type === "UPDATE") && record && record.slug;
 
     if (shouldIndex) {
-      // Вказуємо твій точний домен
       const targetUrl = `https://detruckavtsi.info/blog/${record.slug}`;
+      console.log(`[Google API] Початок автоматичної індексації для: ${targetUrl}`);
 
-      // Авторизація в Google
-      await jwtClient.authorize();
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        throw new Error("Змінна GOOGLE_SERVICE_ACCOUNT_JSON відсутня в Environment Variables");
+      }
 
-      // Відправка запиту на індексацію
-      await google.indexing({ version: "v3", auth: jwtClient }).urlNotifications.publish({
-        requestBody: {
+      // Парсимо повний сервісний акаунт прямо з однієї JSON-змінної
+      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+
+      // Ініціалізуємо JWT клієнт
+      const auth = new JWT({
+        email: credentials.client_email,
+        key: credentials.private_key,
+        scopes: ["https://www.googleapis.com/auth/indexing"],
+      });
+
+      console.log(`[Google API] Надсилання прямого REST-запиту в Google Indexing API...`);
+      
+      // Робимо прямий, чистий REST-запит, який обходить баги збірки Webpack
+      await auth.request({
+        url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
+        method: "POST",
+        data: {
           url: targetUrl,
-          type: "URL_UPDATED", // Підходить як для нових, так і для змінених сторінок
+          type: "URL_UPDATED",
         },
       });
       
-      console.log(`[Google API] Запит на індексацію ${targetUrl} успішно надіслано!`);
+      console.log(`[Google API] ✅ Запит на індексацію ${targetUrl} успішно надіслано!`);
     }
 
     return NextResponse.json({ 
       revalidated: true, 
       googleIndexed: shouldIndex 
     });
-} catch (err: unknown) {
-    console.error("Помилка:", err);
+  } catch (err: unknown) {
+    console.error("🚨 Критична помилка у Webhook роуті:");
 
-    // Перевіряємо, чи є err екземпляром класу Error
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+    let errorMessage = "An unknown error occurred";
+    
+    if (err instanceof Error) {
+      errorMessage = err.message;
+      
+      // Безпечно виводимо лог детальної помилки від Google API, якщо вона є
+      const apiError = err as GoogleApiErrorResponse;
+      if (apiError.response?.data) {
+        console.error(
+          "[Google API] Деталі помилки від Google:", 
+          JSON.stringify(apiError.response.data)
+        );
+      }
+    }
 
     return NextResponse.json(
       { message: "Error", error: errorMessage }, 
