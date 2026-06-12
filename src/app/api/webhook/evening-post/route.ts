@@ -7,6 +7,12 @@ import { google } from "googleapis";
 import { JWT } from "google-auth-library";
 export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
 
+interface GoogleApiErrorResponse {
+    response?: {
+      data?: unknown;
+    };
+  }
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -76,51 +82,56 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 }
 
 async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
-    try {
-      console.log(`[Google Indexing] Завантаження конфігурації з JSON змінної...`);
-      
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        throw new Error("Змінна GOOGLE_SERVICE_ACCOUNT_JSON відсутня в Environment Variables");
-      }
-  
-      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  
-      // Використовуємо прямий JWT клас із полегшеної бібліотеки авторизації Google
-      const auth = new JWT({
-        email: credentials.client_email,
-        key: credentials.private_key,
-        scopes: ["https://www.googleapis.com/auth/indexing"],
-      });
-  
-      console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
-  
-      // Робимо прямий, чистий REST-запит до Google API через авторизований клієнт
-      // Це повністю обходить баги збірки Next.js / OpenSSL
-      const response = await auth.request({
-        url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
-        method: "POST",
-        data: {
-          url: targetUrl,
-          type: "URL_UPDATED",
-        },
-      });
-  
-      console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console!", response.data);
-      return { success: true, message: "Успішно надіслано в Google Indexing!" };
-    } catch (error: unknown) {
-      let errMsg = "Помилка індексації";
-      if (error instanceof Error) {
-        errMsg = error.message;
-        // Якщо Google API повернув детальну помилку, виведемо її теж
-        if ('response' in error && error.response) {
-          const apiData = (error.response as any).data;
-          console.error("[Google Indexing] Деталі помилки від API Google:", JSON.stringify(apiData));
-        }
-      }
-      console.error("[Google Indexing] ❌ Критична помилка:", errMsg);
-      return { success: false, message: errMsg };
+  try {
+    console.log(`[Google Indexing] Завантаження конфігурації з JSON змінної...`);
+    
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+      throw new Error("Змінна GOOGLE_SERVICE_ACCOUNT_JSON відсутня в Environment Variables");
     }
+
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+
+    // Використовуємо прямий JWT клас із полегшеної бібліотеки авторизації Google
+    const auth = new JWT({
+      email: credentials.client_email,
+      key: credentials.private_key,
+      scopes: ["https://www.googleapis.com/auth/indexing"],
+    });
+
+    console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
+
+    // Робимо прямий, чистий REST-запит до Google API через авторизований клієнт
+    const response = await auth.request({
+      url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
+      method: "POST",
+      data: {
+        url: targetUrl,
+        type: "URL_UPDATED",
+      },
+    });
+
+    console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console!", response.data);
+    return { success: true, message: "Успішно надіслано в Google Indexing!" };
+  } catch (error: unknown) {
+    let errMsg = "Помилка індексації";
+    
+    if (error instanceof Error) {
+      errMsg = error.message;
+      
+      // Безпечно приводимо до нашого інтерфейсу помилки замість any
+      const apiError = error as GoogleApiErrorResponse;
+      if (apiError.response?.data) {
+        console.error(
+          "[Google Indexing] Деталі помилки від API Google:", 
+          JSON.stringify(apiError.response.data)
+        );
+      }
+    }
+    
+    console.error("[Google Indexing] ❌ Критична помилка:", errMsg);
+    return { success: false, message: errMsg };
   }
+}
 
 async function runEveningAutoGeneration() {
   console.log("[Evening-Bot] ⏳ Крок 1: Збір вечірніх трендів через RSS Google...");

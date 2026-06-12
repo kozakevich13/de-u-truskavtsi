@@ -7,6 +7,11 @@ import { google } from "googleapis";
 export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
 import { JWT } from "google-auth-library";
 
+interface GoogleApiErrorResponse {
+  response?: {
+    data?: unknown;
+  };
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,7 +96,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
     console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
 
     // Робимо прямий, чистий REST-запит до Google API через авторизований клієнт
-    // Це повністю обходить баги збірки Next.js / OpenSSL
     const response = await auth.request({
       url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
       method: "POST",
@@ -105,14 +109,20 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
     return { success: true, message: "Успішно надіслано в Google Indexing!" };
   } catch (error: unknown) {
     let errMsg = "Помилка індексації";
+    
     if (error instanceof Error) {
       errMsg = error.message;
-      // Якщо Google API повернув детальну помилку, виведемо її теж
-      if ('response' in error && error.response) {
-        const apiData = (error.response as any).data;
-        console.error("[Google Indexing] Деталі помилки від API Google:", JSON.stringify(apiData));
+      
+      // Безпечно приводимо до нашого інтерфейсу помилки замість any
+      const apiError = error as GoogleApiErrorResponse;
+      if (apiError.response?.data) {
+        console.error(
+          "[Google Indexing] Деталі помилки від API Google:", 
+          JSON.stringify(apiError.response.data)
+        );
       }
     }
+    
     console.error("[Google Indexing] ❌ Критична помилка:", errMsg);
     return { success: false, message: errMsg };
   }
