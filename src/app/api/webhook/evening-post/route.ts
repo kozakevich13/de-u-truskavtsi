@@ -99,7 +99,7 @@ async function runEveningAutoGeneration() {
   let currentTrendKeyword = "";
 
   try {
-    const googleTrendsRssUrl = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=UA";
+    const googleTrendsRssUrl = "https://trends.google.com/trending/rss?geo=UA";
     const rssResponse = await axios.get(googleTrendsRssUrl, { timeout: 8000 });
     const $ = cheerio.load(rssResponse.data, { xmlMode: true });
     
