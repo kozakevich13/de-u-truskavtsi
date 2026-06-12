@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { google } from "googleapis";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { JWT } from "google-auth-library";
 export const runtime = "nodejs"; 
 
@@ -196,7 +195,25 @@ async function runEveningAutoGeneration() {
   }`;
 
   console.log("[Evening-Bot] ⏳ Крок 2: Ініціалізація Gemini моделі...");
-  const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const model = ai.getGenerativeModel({ 
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: SchemaType.OBJECT, // 👈 Рідний Enum конфігурації Google
+        properties: {
+          title: { type: SchemaType.STRING },
+          slug: { type: SchemaType.STRING },
+          excerpt: { type: SchemaType.STRING },
+          keywords: { type: SchemaType.STRING },
+          image_keyword: { type: SchemaType.STRING },
+          content: { type: SchemaType.STRING }
+        },
+        required: ["title", "slug", "excerpt", "keywords", "image_keyword", "content"]
+      }
+    }
+  });
   let responseFromGemini;
   let aiTextOutput = "";
   
