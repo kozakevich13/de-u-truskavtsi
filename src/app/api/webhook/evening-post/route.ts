@@ -5,13 +5,13 @@ import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { google } from "googleapis";
 import { JWT } from "google-auth-library";
-export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
+export const runtime = "nodejs"; 
 
 interface GoogleApiErrorResponse {
-    response?: {
-      data?: unknown;
-    };
-  }
+  response?: {
+    data?: unknown;
+  };
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,7 +91,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
 
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 
-    // Використовуємо прямий JWT клас із полегшеної бібліотеки авторизації Google
     const auth = new JWT({
       email: credentials.client_email,
       key: credentials.private_key,
@@ -100,7 +99,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
 
     console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
 
-    // Робимо прямий, чистий REST-запит до Google API через авторизований клієнт
     const response = await auth.request({
       url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
       method: "POST",
@@ -111,25 +109,29 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
     });
 
     console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console!", response.data);
-    return { success: true, message: "Успішно надіслано в Google Indexing!" };
+    return { success: true, message: "✅ Успішно надіслано в Google Search Console!" };
   } catch (error: unknown) {
     let errMsg = "Помилка індексації";
     
     if (error instanceof Error) {
       errMsg = error.message;
       
-      // Безпечно приводимо до нашого інтерфейсу помилки замість any
       const apiError = error as GoogleApiErrorResponse;
       if (apiError.response?.data) {
         console.error(
           "[Google Indexing] Деталі помилки від API Google:", 
           JSON.stringify(apiError.response.data)
         );
+        // Спробуємо дістати красивий опис помилки безпосередньо від сервісу Google, якщо він є
+        const gData = apiError.response.data as any;
+        if (gData?.error?.message) {
+          errMsg = gData.error.message;
+        }
       }
     }
     
     console.error("[Google Indexing] ❌ Критична помилка:", errMsg);
-    return { success: false, message: errMsg };
+    return { success: false, message: `❌ Помилка API: \`${errMsg}\`` };
   }
 }
 
@@ -159,7 +161,6 @@ async function runEveningAutoGeneration() {
     console.log(`[Evening-Bot] 🔥 Обрано запасну тему: "${currentTrendKeyword}"`);
   }
 
-  // Динамічний масив форматів для урізноманітнення стрічки новин
   const formats = [
     "Практичний гайд / інструкція для туристів",
     "Локальний топ-добірка з аналізом цін та умов",
@@ -174,31 +175,19 @@ async function runEveningAutoGeneration() {
   Сьогодні ти пишеш матеріал СУВОРO у форматі: **${currentFormat}**.
 
   СУВОРІ ПРАВИЛА ДЛЯ ОБХОДУ ФІЛЬТРІВ GOOGLE ТА БОРОТЬБИ З ШАБЛОНАМИ СТРІЧКИ:
-
-  1. КАТЕГОРИЧНО ЗАБОРОНЕНІ ШІ-КЛІШЕ ТА ПАФОС:
-  - Жодних перебільшень: "Google розривається від запитів", "мільйони українців шукають", "шалений тренд", "справжній бум". Пиши стримано: "За останніми даними пошукових трендів...", "Зараз спостерігається сезонне зростання інтересу до...".
-  - Жодних дешевих закликів та езотерики: "Пристібніть паски", "вирушаємо в захопливу подорож", "дізнатися всі секрети", "магічна вода", "еліксир для душі та тіла", "неймовірні краєвиди".
-  - Жодних підліткових привітань: "Доброго ранку/вечора, друзі!" або "Увага, друзі!". Починай статтю одразу з контексту, проблеми або аналітики відповідно до формату "${currentFormat}".
-
-  2. СУВОРЕ ТАБУ НА ОДНОТИПНІ ЗАГОЛОВКИ Й АНОНСИ (АНТИ-ШАБЛОН):
-  - КАТЕГОРИЧНО ЗАБОРОНЕНО будувати заголовки за схемою "Тема: Підтема" (забудь про двокрапки виду "Трускавець: Фокус на..."). Сформулюй живий журналістський заголовок, адаптований під формат "${currentFormat}".
-  - ЧОРНИЙ СПИСОК СЛІВ ДЛЯ EXCERPT (МЕТА-ОПИСУ): Заборонено починати або використовувати в описі слова: "Аналіз", "Огляд", "У цій статті", "Дослідження", "Розгляд". Опис має бути живим, інтригуючим фактом або закликом до дії для людини, а не технічним звітом. Заборонено згадувати абревіатуру "Google E-E-A-T" у тексті, який бачить читач.
-
-  3. СУХИЙ МЕДИКО-ТУРИСТИЧНИЙ ТОН (Expertise):
-  Пиши впевнено, серйозно та аргументовано. Мінеральні води, джерела чи SPA-процедури мають описуватися з погляду бальнеології, доведеної медицини та реального сервісу. Текст має бути корисним для дорослої людини, яка планує поїздку.
-
-  4. ГЛИБОКА ЛОКАЛЬНА КОНКРЕТИКА (Матчастина) ТА ДОСВІД (Experience):
-  - Обов'язково інтегруй у текст мінімум 3-4 реальні локації, медичні застереження або бальнеологічні факти. Наприклад: мінеральні води (Нафтуся, Марія), їхній хімічний склад (органіка нафтового походження, гідрокарбонати), специфіка прийому (пити виключно через фарфорові куманці/поїлки в бюветі для захисту емалі зубів, втрата лікувальних властивостей на повітрі за 15-20 хвилин), або конкретні діючі комплекси (Mirotel, Rixos, Женева, Карпати, Шале Грааль, джерела Східниці №2с чи №18, спа-готель "Респект").
-  - Органічно вплети у текст фрази: "наша редакція перевірила", "місцеві фахівці радять", "за спостереженнями наших гідів", "відгуки відпочивальників цього сезону підтверджують".
+  1. КАТЕГОРИЧНО ЗАБОРОНЕНІ ШІ-КЛІШЕ ТА ПАФОС: Жодних "шалений тренд", "бум запитів", "Доброго вечора, друзі!". Починай статтю одразу з контексту, проблеми або аналітики відповідно до формату "${currentFormat}".
+  2. СУВОРЕ ТАБУ НА ОДНОТИПНІ ЗАГОЛОВКИ Й АНОНСИ (АНТИ-ШАБЛОН): КАТЕГОРИЧНО ЗАБОРОНЕНО будувати заголовки за схемою "Тема: Підтема" (без двокрапок). Заборонено починати опис (excerpt) зі слів: "Аналіз", "Огляд", "У цій статті", "Дослідження", "Розгляд".
+  3. СУХИЙ МЕДИКО-ТУРИСТИЧНИЙ ТОН: Мінеральні води, джерела чи SPA-процедури мають описуватися з погляду бальнеології, доведеної медицини та реального сервісу.
+  4. ГЛИБОКА ЛОКАЛЬНА КОНКРЕТИКА ТА ДОСВІД: Інтегруй у текст мінімум 3-4 реальні локації чи факти (Mirotel, Rixos, Шале Грааль, джерела Східниці №2с чи №18, пити через куманці, втрата властивостей Нафтусі за 15-20 хв).
 
   Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта):
   {
     "title": "Унікальний журналістський SEO-заголовок (до 60 символів) БЕЗ ДВОКРАПОК, адаптований під формат ${currentFormat}",
     "slug": "url-шлях-транслітом-виключно-через-дефіси",
-    "excerpt": "Живий, нешаблонний анонс для картки (до 150 символів). Жодних слів 'аналіз' чи 'огляд'. Почни одразу з факту або інтриги.",
+    "excerpt": "Живий, нешаблонний анонс для картки (до 150 символів). Жодних слів 'аналіз' чи 'огляд'. Почни одразу з фактологічної інтриги.",
     "keywords": "Трускавець, відпочинок Трускавець, санаторії Західної України, Карпати, плюс 2-3 теги тренду",
     "image_keyword": "одне слово англійською для Unsplash (наприклад: 'spa', 'resort', 'hotel', 'nature')",
-    "content": "Повний текст статті виключно в HTML форматі. Текст має бути розбитий на логічні блоки з висновком. Кожен абзац загорни в <p>, підзаголовки структурних блоків в <h3>, списки з порадами/локаціями в <ul><li>. Важливі факти, цифри, назви готелів та джерел виділяй через <strong>. Без знаків переносу рядків \\n."
+    "content": "Повний текст статті виключно в HTML форматі (<p>, <h3>, <ul><li>, <strong>). Без знаків переносу рядків \\n."
   }`;
 
   console.log("[Evening-Bot] ⏳ Крок 2: Ініціалізація Gemini моделі...");
@@ -274,14 +263,15 @@ async function runEveningAutoGeneration() {
   const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
   
   console.log("[Evening-Bot] ⏳ Крок 6: Запуск індексації URL у Google Search Console...");
-  await triggerGoogleIndexing(deployedArticleUrl);
+  // 🔥 Перехоплюємо живий результат виконання запиту на індексацію
+  const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
 
   const adminChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
   if (adminChatId) {
     console.log("[Evening-Bot] ⏳ Крок 7: Надсилання фінального звіту в Telegram...");
     await sendTelegramMessage(
       adminChatId,
-      `🌆 *Вечірній автопостинг виконано!*\n\n🔥 *Свіжий тренд вечора:* \`${currentTrendKeyword}\`\n📌 *Назва статті:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ✅ Надіслано автоматично у фоні.`
+      `🌆 *Вечірній автопостинг виконано!*\n\n🔥 *Свіжий тренд вечора:* \`${currentTrendKeyword}\`\n📌 *Назва статті:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`
     );
   }
 }
@@ -301,8 +291,6 @@ export async function GET(req: Request) {
     }
 
     console.log("[Cron GET] 🚀 Авторизація успішна. Початок лінійної генерації статті...");
-    
-    // Виконуємо код прямо без setTimeout, щоб Vercel не закрив з'єднання передчасно
     await runEveningAutoGeneration();
 
     console.log("[Cron GET] 🎉 Процес автопостингу повністю завершено.");

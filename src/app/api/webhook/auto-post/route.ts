@@ -36,13 +36,15 @@ async function sendTelegramMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId) return;
   try {
+    console.log(`[Telegram] Надсилання сповіщення для чату ${chatId}...`);
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" }),
     });
+    console.log("[Telegram] ✅ Сповіщення успішно надіслано.");
   } catch (err) {
-    console.error("[Telegram] Помилка відправки:", err);
+    console.error("[Telegram] ❌ Помилка відправки:", err);
   }
 }
 
@@ -95,7 +97,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
 
     console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
 
-    // Робимо прямий, чистий REST-запит до Google API через авторизований клієнт
     const response = await auth.request({
       url: "https://indexing.googleapis.com/v3/urlNotifications:publish",
       method: "POST",
@@ -106,25 +107,28 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
     });
 
     console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console!", response.data);
-    return { success: true, message: "Успішно надіслано в Google Indexing!" };
+    return { success: true, message: "✅ Успішно надіслано в Google Search Console!" };
   } catch (error: unknown) {
     let errMsg = "Помилка індексації";
     
     if (error instanceof Error) {
       errMsg = error.message;
       
-      // Безпечно приводимо до нашого інтерфейсу помилки замість any
       const apiError = error as GoogleApiErrorResponse;
       if (apiError.response?.data) {
         console.error(
           "[Google Indexing] Деталі помилки від API Google:", 
           JSON.stringify(apiError.response.data)
         );
+        const gData = apiError.response.data as Record<string, any>;
+        if (gData?.error?.message) {
+          errMsg = gData.error.message;
+        }
       }
     }
     
     console.error("[Google Indexing] ❌ Критична помилка:", errMsg);
-    return { success: false, message: errMsg };
+    return { success: false, message: `❌ Помилка API: \`${errMsg}\`` };
   }
 }
 
@@ -134,8 +138,8 @@ async function runDailyAutoGeneration() {
   let currentTrendKeyword = "";
 
   try {
-    // Парсимо офіційну RSS стрічку щоденних трендів Google для України (UA)
-    const googleTrendsRssUrl = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=UA";
+    // 🔥 ВИПРАВЛЕНО: Робочий URL щоденних трендів Google
+    const googleTrendsRssUrl = "https://trends.google.com/trending/rss?geo=UA";
     const rssResponse = await axios.get(googleTrendsRssUrl, { timeout: 8000 });
     const $ = cheerio.load(rssResponse.data, { xmlMode: true });
     
@@ -145,9 +149,8 @@ async function runDailyAutoGeneration() {
     });
 
     if (trends.length > 0) {
-      // Беремо випадковий гарячий тренд із топ-5 сьогоднішніх запитів в Україні
       currentTrendKeyword = trends[Math.floor(Math.random() * Math.min(5, trends.length))];
-      console.log(`[Auto-Bot] Знайдено активний тренд в Google UA: "${currentTrendKeyword}"`);
+      console.log(`[Auto-Bot] Знайдено активний trend в Google UA: "${currentTrendKeyword}"`);
     } else {
       throw new Error("Стрічка трендів порожня");
     }
@@ -156,8 +159,6 @@ async function runDailyAutoGeneration() {
     currentTrendKeyword = FALLBACK_TOPICS[Math.floor(Math.random() * FALLBACK_TOPICS.length)];
   }
 
-  // Складаємо промпт для Gemini з фокусом на знайдений тренд та туризм Західної України
-  // Масив форматів для урізноманітнення типу контенту в стрічці
   const formats = [
     "Практичний гайд або інструкція для туристів",
     "Локальна добірка з аналізом умов та сервісу",
@@ -204,7 +205,7 @@ async function runDailyAutoGeneration() {
   let aiTextOutput = "";
   
   const maxRetries = 5;
-  const fixedWaitTime = 5000; // 5 секунд у мілісекундах
+  const fixedWaitTime = 5000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -224,7 +225,7 @@ async function runDailyAutoGeneration() {
         throw new Error(`Бот здався після ${maxRetries} спроб достукатися до Gemini із інтервалом у 5 секунд.`);
       }
       
-      console.log(`[Gemini] Очікування 5 секунд перед наступною спробою №${attempt + 1}...`);
+      console.log(`[Gemini] Очікування 5 секунд перед наступною спробою...`);
       await new Promise((resolve) => setTimeout(resolve, fixedWaitTime));
     }
   }
@@ -242,7 +243,6 @@ async function runDailyAutoGeneration() {
   const autoImageUrl = await fetchUnsplashPhoto(parsedArticle.image_keyword || "travel");
   const uniqueSlug = parsedArticle.slug + "-" + Date.now().toString().slice(-4);
 
-  // Кладемо в базу Supabase
   const { error: dbError } = await supabase.from("posts").insert([
     {
       title: parsedArticle.title,
@@ -261,25 +261,26 @@ async function runDailyAutoGeneration() {
   if (dbError) throw dbError;
 
   const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
-  await triggerGoogleIndexing(deployedArticleUrl);
+  
+  // 🔥 Отримуємо живий статус індексації для ранкового автопостингу
+  const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
 
-  // Сповіщаємо власника в Telegram про успішний автопостинг
   const adminChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
   if (adminChatId) {
     await sendTelegramMessage(
       adminChatId,
-      `🌅 *Ранковий автопостинг виконано!*\n\n🔥 *Тренд ранку:* \`${currentTrendKeyword}\`\n📌 *Нова стаття:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ✅ Надіслано автоматично! Бот працює, поки ви відпочиваєте.`
+      `🌅 *Ранковий автопостинг виконано!*\n\n🔥 *Тренд ранку:* \`${currentTrendKeyword}\`\n📌 *Нова стаття:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`
     );
   }
 }
 
 // 5. ОБРОБНИК GET ЗАПИТІВ (ДЛЯ CRON-JOB ЗРАНКУ)
 export async function GET(req: Request) {
+  const adminChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
   try {
     const { searchParams } = new URL(req.url);
     const secret = searchParams.get("secret");
 
-    // Захист роуту, щоб сторонні люди не спамили генерацію статей
     if (secret !== process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -289,6 +290,10 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Помилка крону";
     console.error("🚨 Помилка автогенерації:", msg);
+    
+    if (adminChatId) {
+      await sendTelegramMessage(adminChatId, `🚨 *Критичний збій ранкового автопостингу:* \`${msg}\``);
+    }
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
@@ -374,9 +379,11 @@ export async function POST(req: Request) {
     if (dbError) throw dbError;
 
     const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
-    await triggerGoogleIndexing(deployedArticleUrl);
+    
+    // 🔥 Отримуємо живий статус індексації для ручного Telegram-рерайту
+    const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
 
-    await sendTelegramMessage(chatId, `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ✅ Успішно надіслано!`);
+    await sendTelegramMessage(chatId, `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`);
     return NextResponse.json({ status: "success" });
 
   } catch (error: unknown) {
