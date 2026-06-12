@@ -137,23 +137,29 @@ async function runDailyAutoGeneration() {
   let responseFromGemini;
   let aiTextOutput = "";
   
-  // Паттерн Retry: робимо до 3 спроб, якщо Google віддає 503
-  const maxRetries = 3;
+  const maxRetries = 5;
+  const fixedWaitTime = 5000; // 5 секунд у мілісекундах
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`[Gemini] Надсилання запиту до ШІ. Спроба №${attempt}...`);
       responseFromGemini = await model.generateContent(prompt);
       aiTextOutput = responseFromGemini.response.text().trim();
-      break; // Якщо запит успішний — виходимо з циклу спроб
+      
+      if (aiTextOutput) {
+        console.log(`[Gemini] 🎉 Успішно отримано відповідь на спробі №${attempt}!`);
+        break; 
+      }
     } catch (geminiErr: unknown) {
-      const errorWithDetailedMessage = geminiErr instanceof Error ? geminiErr.message : "Unknown Gemini Error";
-      console.warn(`[Gemini] Спроба ${attempt} провалилася. Помилка: ${errorWithDetailedMessage}`);
+      const errorMsg = geminiErr instanceof Error ? geminiErr.message : "Невідома помилка ШІ";
+      console.warn(`[Gemini] Спроба №${attempt} провалилася. Помилка: ${errorMsg}`);
       
       if (attempt === maxRetries) {
-        throw new Error(`Google Gemini SDK не зміг відповісти після ${maxRetries} спроб через перевантаження серверів.`);
+        throw new Error(`Бот здався після ${maxRetries} спроб достукатися до Gemini із інтервалом у 5 секунд.`);
       }
       
-      // Чекаємо 4 секунди перед наступною спробою
-      await new Promise((resolve) => setTimeout(resolve, 4000));
+      console.log(`[Gemini] Очікування 5 секунд перед наступною спробою №${attempt + 1}...`);
+      await new Promise((resolve) => setTimeout(resolve, fixedWaitTime));
     }
   }
 
