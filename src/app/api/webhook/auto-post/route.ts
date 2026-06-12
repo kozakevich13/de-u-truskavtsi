@@ -9,7 +9,11 @@ import { JWT } from "google-auth-library";
 
 interface GoogleApiErrorResponse {
   response?: {
-    data?: unknown;
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
   };
 }
 
@@ -120,9 +124,11 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
           "[Google Indexing] Деталі помилки від API Google:", 
           JSON.stringify(apiError.response.data)
         );
-        const gData = apiError.response.data as Record<string, any>;
-        if (gData?.error?.message) {
-          errMsg = gData.error.message;
+        
+        // TypeScript тепер сам бачить поле error?.message завдяки інтерфейсу
+        const googleErrorMessage = apiError.response.data.error?.message;
+        if (googleErrorMessage) {
+          errMsg = googleErrorMessage;
         }
       }
     }
