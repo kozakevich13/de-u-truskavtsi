@@ -74,25 +74,33 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 }
 
 async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
-  try {
-    console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
-    const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      scopes: ["https://www.googleapis.com/auth/indexing"]
-    });
-    const indexing = google.indexing({ version: "v3", auth: auth });
-    await indexing.urlNotifications.publish({
-      requestBody: { url: targetUrl, type: "URL_UPDATED" },
-    });
-    console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console.");
-    return { success: true, message: "Успішно надіслано в Google Indexing!" };
-  } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : "Помилка індексації";
-    console.error("[Google Indexing] ❌ Помилка:", errMsg);
-    return { success: false, message: errMsg };
+    try {
+      console.log(`[Google Indexing] Декодування приватного ключа з Base64...`);
+      
+      // Чисте розгортання суцільного рядка Base64 у вихідний формат ключа
+      const privateKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY!, "base64").toString("utf8");
+  
+      const auth = new google.auth.JWT({
+        email: process.env.GOOGLE_CLIENT_EMAIL,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/indexing"]
+      });
+  
+      const indexing = google.indexing({ version: "v3", auth: auth });
+      
+      console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
+      await indexing.urlNotifications.publish({
+        requestBody: { url: targetUrl, type: "URL_UPDATED" },
+      });
+      
+      console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console.");
+      return { success: true, message: "Успішно надіслано в Google Indexing!" };
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : "Помилка індексації";
+      console.error("[Google Indexing] ❌ Помилка:", errMsg);
+      return { success: false, message: errMsg };
+    }
   }
-}
 
 async function runEveningAutoGeneration() {
   console.log("[Evening-Bot] ⏳ Крок 1: Збір вечірніх трендів через RSS Google...");

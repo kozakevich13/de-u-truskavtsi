@@ -70,18 +70,28 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 // 3. Відправка URL в Google Indexing API
 async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
   try {
+    console.log(`[Google Indexing] Декодування приватного ключа з Base64...`);
+    
+    // Безпечно розгортаємо рядок Base64 у вихідний формат ключа
+    const privateKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY!, "base64").toString("utf8");
+
     const auth = new google.auth.JWT({
       email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      key: privateKey,
       scopes: ["https://www.googleapis.com/auth/indexing"]
     });
+
     const indexing = google.indexing({ version: "v3", auth: auth });
+    
+    console.log(`[Google Indexing] Відправка лінку в Google: ${targetUrl}`);
     await indexing.urlNotifications.publish({
       requestBody: { url: targetUrl, type: "URL_UPDATED" },
     });
+    
     return { success: true, message: "Успішно надіслано в Google Indexing!" };
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : "Помилка індексації";
+    console.error("[Google Indexing] ❌ Збій процесу:", errMsg);
     return { success: false, message: errMsg };
   }
 }
