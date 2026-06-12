@@ -4,6 +4,7 @@ import * as cheerio from "cheerio";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { google } from "googleapis";
+export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,28 +71,29 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 // 3. Відправка URL в Google Indexing API
 async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
   try {
-    console.log(`[Google Indexing] Декодування приватного ключа з Base64...`);
+    console.log(`[Google Indexing] Завантаження конфігурації з JSON зміної...`);
     
-    // Безпечно розгортаємо рядок Base64 у вихідний формат ключа
-    const privateKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY!, "base64").toString("utf8");
+    // Парсимо повний сервісний акаунт прямо з однієї змінної
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
 
     const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: privateKey,
+      email: credentials.client_email,
+      key: credentials.private_key,
       scopes: ["https://www.googleapis.com/auth/indexing"]
     });
 
     const indexing = google.indexing({ version: "v3", auth: auth });
     
-    console.log(`[Google Indexing] Відправка лінку в Google: ${targetUrl}`);
+    console.log(`[Google Indexing] Надсилання лінку на індексацію: ${targetUrl}...`);
     await indexing.urlNotifications.publish({
       requestBody: { url: targetUrl, type: "URL_UPDATED" },
     });
     
+    console.log("[Google Indexing] ✅ URL успішно надісано!");
     return { success: true, message: "Успішно надіслано в Google Indexing!" };
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : "Помилка індексації";
-    console.error("[Google Indexing] ❌ Збій процесу:", errMsg);
+    console.error("[Google Indexing] ❌ Помилка:", errMsg);
     return { success: false, message: errMsg };
   }
 }

@@ -4,6 +4,7 @@ import * as cheerio from "cheerio";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { google } from "googleapis";
+export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,14 +76,14 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 
 async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: boolean; message: string }> {
     try {
-      console.log(`[Google Indexing] Декодування приватного ключа з Base64...`);
+      console.log(`[Google Indexing] Завантаження конфігурації з JSON зміної...`);
       
-      // Чисте розгортання суцільного рядка Base64 у вихідний формат ключа
-      const privateKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY!, "base64").toString("utf8");
+      // Парсимо повний сервісний акаунт прямо з однієї змінної
+      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
   
       const auth = new google.auth.JWT({
-        email: process.env.GOOGLE_CLIENT_EMAIL,
-        key: privateKey,
+        email: credentials.client_email,
+        key: credentials.private_key,
         scopes: ["https://www.googleapis.com/auth/indexing"]
       });
   
@@ -93,7 +94,7 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
         requestBody: { url: targetUrl, type: "URL_UPDATED" },
       });
       
-      console.log("[Google Indexing] ✅ URL успішно надіслано в Google Search Console.");
+      console.log("[Google Indexing] ✅ URL успішно надісано!");
       return { success: true, message: "Успішно надіслано в Google Indexing!" };
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : "Помилка індексації";
