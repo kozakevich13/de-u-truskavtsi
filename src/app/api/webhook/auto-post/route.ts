@@ -217,7 +217,7 @@ async function generateDraftArticle() {
       keywords: parsedArticle.keywords,
       category: "Блог",
       author_name: "Локальний експерт",
-      author_image: "[https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png](https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png)",
+      author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
       is_published: false, // 👈 Створюємо як приховану чернетку
       image_url: autoImageUrl
     }
