@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -29,3 +30,44 @@ h1, h2, h3, h4 {
   letter-spacing: -0.02em;
 }
 
+/* --- СТИЛІЗАЦІЯ ВНУТРІШНІХ ПОСИЛАНЬ ДЛЯ ТЕКСТУ СТАТТІ (SEO) --- */
+
+/* Світла тема (дефолтний стан) */
+.prose a {
+  color: #2563eb; /* Tailwind blue-600 */
+  font-weight: 800; /* extrabold */
+  text-decoration: underline;
+  text-decoration-color: rgba(37, 99, 235, 0.4); /* Напівпрозора тонка лінія */
+  text-underline-offset: 4px; /* Повітряний відступ від літер */
+  text-decoration-thickness: 2px;
+  transition: all 0.2s ease-in-out;
+}
+
+.prose a:hover {
+  color: #3b82f6; /* Tailwind blue-500 */
+  text-decoration-color: rgba(59, 130, 246, 1); /* Яскрава лінія при наведенні */
+}
+
+/* Темна тема (враховуючи системні налаштування або клас .dark) */
+@media (prefers-color-scheme: dark) {
+  .prose a {
+    color: #60a5fa; /* Tailwind blue-400 */
+    text-decoration-color: rgba(96, 165, 250, 0.4);
+  }
+
+  .prose a:hover {
+    color: #93c5fd; /* Tailwind blue-300 */
+    text-decoration-color: rgba(147, 197, 253, 1);
+  }
+}
+
+/* Якщо ти перемикаєш темну тему через клас .dark на тегу html/body */
+.dark .prose a {
+  color: #60a5fa;
+  text-decoration-color: rgba(96, 165, 250, 0.4);
+}
+
+.dark .prose a:hover {
+  color: #93c5fd;
+  text-decoration-color: rgba(147, 197, 253, 1);
+}
