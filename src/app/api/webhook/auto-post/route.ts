@@ -16,6 +16,11 @@ interface GoogleApiErrorResponse {
   };
 }
 
+interface ExistingPostLink {
+  title: string;
+  slug: string;
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -24,14 +29,14 @@ const supabase = createClient(
 // Ініціалізація Gemini
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// --- ВСЕУКРАЇНСЬКІ ТА ЛОКАЛЬНІ ТРЕНДОВІ ТЕМИ (Запасні, якщо Google Trends лежить) ---
-const FALLBACK_TOPICS = [
-  "відпочинок в карпатах літо ціни",
-  "куди поїхати на вихідні біля льовова",
-  "лікувальна вода нафтуся трускавець як пити",
-  "найкращі санаторії західної україни",
-  "що подивитися в трускавці за три дні",
-  "ціни на відпочинок у трускавці 2026"
+// Стратегічний нішевий масив для генерації та пошуку ідей
+const NICHE_KEYWORDS = [
+  "Трускавець (санаторії, бювет, ціни, відпочинок)",
+  "Східниця (джерела, спа-готелі, релакс, приватний сектор)",
+  "Моршин (оздоровлення, мінеральні води, лікування шлунку)",
+  "Здоров'я та Бальнеологія (лікувальна вода Нафтуся, Марія, реабілітація)",
+  "Масаж та SPA (лікувальний масаж, термальні басейни, детокс-програми)",
+  "Походи, екскурсії та подорожі (природа Карпат, Скелі Довбуша, Тустань, водоспади)"
 ];
 
 // 1. Функція відправки повідомлень у Telegram
@@ -91,7 +96,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
 
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 
-    // Використовуємо прямий JWT клас із полегшеної бібліотеки авторизації Google
     const auth = new JWT({
       email: credentials.client_email,
       key: credentials.private_key,
@@ -124,7 +128,6 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
           JSON.stringify(apiError.response.data)
         );
         
-        // TypeScript тепер сам бачить поле error?.message завдяки інтерфейсу
         const googleErrorMessage = apiError.response.data.error?.message;
         if (googleErrorMessage) {
           errMsg = googleErrorMessage;
@@ -137,32 +140,25 @@ async function triggerGoogleIndexing(targetUrl: string): Promise<{ success: bool
   }
 }
 
-// 4. ФУНКЦІЯ ПАРСИНГУ GOOGLE TRENDS ТА ГЕНЕРАЦІЇ СТАТТІ
+// 4. ФУНКЦІЯ АНАЛІЗУ ТА ГЕНЕРАЦІЇ РАНКОВОЇ СТАТТІ
 async function runDailyAutoGeneration() {
-  console.log("[Auto-Bot] Запуск ранкової генерації через Google Trends...");
-  let currentTrendKeyword = "";
+  console.log("[Auto-Bot] ⏳ Крок 1: Вибір нішевого напрямку для аналізу...");
+  const selectedNicheVector = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
+  console.log(`[Auto-Bot] 🎯 Ранковий вектор аналізу: "${selectedNicheVector}"`);
 
-  try {
-    // 🔥 ВИПРАВЛЕНО: Робочий URL щоденних трендів Google
-    const googleTrendsRssUrl = "https://trends.google.com/trending/rss?geo=UA";
-    const rssResponse = await axios.get(googleTrendsRssUrl, { timeout: 8000 });
-    const $ = cheerio.load(rssResponse.data, { xmlMode: true });
-    
-    const trends: string[] = [];
-    $("item title").each((_, el) => {
-      trends.push($(el).text().trim());
-    });
+  // ⛓️ Крок 1.5: Отримуємо попередні статті з Supabase для внутрішньої перелінковки
+  console.log("[Auto-Bot] ⏳ Крок 1.5: Отримання лінків для внутрішньої перелінковки...");
+  const { data: recentPosts } = await supabase
+    .from("posts")
+    .select("title, slug")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false })
+    .limit(3);
 
-    if (trends.length > 0) {
-      currentTrendKeyword = trends[Math.floor(Math.random() * Math.min(5, trends.length))];
-      console.log(`[Auto-Bot] Знайдено активний trend в Google UA: "${currentTrendKeyword}"`);
-    } else {
-      throw new Error("Стрічка трендів порожня");
-    }
-  } catch (err) {
-    console.warn("[Auto-Bot] Не вдалося спарсити Google Trends, беремо запасний тренд регіону...");
-    currentTrendKeyword = FALLBACK_TOPICS[Math.floor(Math.random() * FALLBACK_TOPICS.length)];
-  }
+  const existingLinks: ExistingPostLink[] = recentPosts || [];
+  const linksPromptString = existingLinks.length > 0
+    ? existingLinks.map(p => `- Стаття: [${p.title}](https://detruckavtsi.info/blog/${p.slug})`).join("\n")
+    : "Попередні статті відсутні.";
 
   const formats = [
     "Практичний гайд або інструкція для туристів",
@@ -172,47 +168,44 @@ async function runDailyAutoGeneration() {
   ];
   const currentFormat = formats[Math.floor(Math.random() * formats.length)];
 
-  const prompt = `Ти — авторитетний локальний журналіст, аналітик туристичного порталу "Гід Трускавця" та експерт із копірайтингу за суворими стандартами Google E-E-A-T.
-  Твоє завдання — написати корисну, фактологічну статтю українською мовою, яка інтегрує актуальний пошуковий тренд "${currentTrendKeyword}" у контекст відпочинку, оздоровлення, SPA або бальнеології на Західній Україні (Трускавець, Східниця, Моршин, Карпати).
+  const prompt = `Ти — авторитетний локальний журналіст, аналітик туристичного порталу "Гід Трускавця" та провідний експерт із копірайтингу за стандартами Google E-E-A-T.
+  Зараз червень 2026 року (активний сезон літніх подорожей, високий попит на квитки, спека, потреба людей у фізичному оздоровленні та знятті стресу в Україні).
 
-  Сьогодні ти пишеш матеріал СУВОРO у форматі: **${currentFormat}**.
+  Твоє завдання — змоделювати актуальний пошуковий тренд та написати корисну, фактологічну статтю українською мовою у форматі: **${currentFormat}**.
+  Стаття має базуватися НАЙПЕРШЕ на аналізі актуальних потреб українців у межах цього нішевого напрямку: "${selectedNicheVector}".
+  Подумай, які практичні нюанси люди шукають у Google за цим напрямком прямо зараз (ціни 2026 року, реальні умови, як підібрати джерело, протипоказання Нафтусі, де знайти професійний масаж, безпечні маршрути в горах) і побудуй навколо цього експертний матеріал.
 
-  СУВОРІ ПРАВИЛА ДЛЯ ОБХОДУ ФІЛЬТРІВ GOOGLE ТА УСУНЕННЯ ОДНОТИПНОСТІ СТРІЧКИ:
+  ⛓️ СУВОРЕ ПРАВИЛО ВНУТРІШНЬОЇ ПЕРЕЛІНКОВКИ (SEO INTERNAL LINKING):
+  Ось список останніх опублікованих статей на нашому сайті:
+  ${linksPromptString}
+  
+  Тобі потрібно ОБОВ'ЯЗКОВО обрати з цього списку мінімум 1 (або максимум 2) найбільш релевантні за змістом статті та органічно вбудувати посилання на них всередину HTML тексту поля "content". 
+  Посилання має мати вигляд: <a href="/blog/тут-slug-з-списку">природний текст анкору українською мовою</a>. 
+  Анкор повинен ідеально підходити за змістом речення, бути читабельним і не виглядати як спам. Заборонено використовувати слова "читайте тут", "посилання".
 
-  1. КАТЕГОРИЧНО ЗАБОРОНЕНІ ШІ-КЛІШЕ ТА ГІПЕРБОЛІЗАЦІЯ:
-  - Жодних перебільшень: "Google розривається від запитів", "мільйони українців шукають", "шалений тренд", "справжній бум". Пиши стримано: "За останніми даними пошукових трендів...", "Зараз спостерігається сезонне зростання інтересу до...".
-  - Жодних дешевих закликів та езотерики: "Пристібніть паски", "вирушаємо в захопливу подорож", "дізнатися всі секрети", "магічна вода", "еліксир для душі та тіла", "неймовірні краєвиди".
-  - Жодних підліткових привітань: "Доброго ранку/вечора, друзі!" або "Увага, друзі!". Починай статтю одразу з контексту, проблеми або аналітики відповідно до стилю "${currentFormat}".
+  СУВОРІ ПРАВИЛА ДЛЯ ОБХОДУ ФІЛЬТРІВ GOOGLE:
+  1. КАТЕГОРИЧНО ЗАБОРОНЕНІ ШІ-КЛІШЕ ТА ГІПЕРБОЛІЗАЦІЯ: Жодних "шалений тренд", "бум запитів", "Доброго ранку, друзі!", "магічна вода", "пристібніть паски". Починай статтю одразу з контексту чи аналітики відповідно до стилю "${currentFormat}".
+  2. СУВОРЕ ТАБУ НА ОДНОТИПНІ ЗАГОЛОВКИ ТА МЕТА-ОПИСИ (АНТИ-ШАБЛОН): КАТЕГОРИЧНО ЗАБОРОНЕНО будувати заголовки за схемою "Тема: Підтема" (без двокрапок). Заборонено починати опис (excerpt) зі слів: "Аналіз", "Огляд", "У цій статті", "Дослідження".
+  3. СУХИЙ МЕДИКО-ТУРИСТИЧНИЙ ТОН: Описуй процеси з погляду бальнеології, доведеної медицини та реального сервісу, а не "магії".
+  4. ЛОКАЛЬНА КОНКРЕТИКА: Інтегруй у текст мінімум 3-4 реальні локації чи факти (Mirotel, Rixos, Шале Грааль, джерела Східниці №2с чи №18, пити через куманці, втрата властивостей Нафтусі за 15-20 хвилин на повітрі через окиснення органіки).
 
-  2. СУВОРЕ ТАБУ НА ОДНОТИПНІ ЗАГОЛОВКИ ТА МЕТА-ОПИСИ (АНТИ-ШАБЛОН):
-  - КАТЕГОРИЧНО ЗАБОРОНЕНО будувати заголовки за схемою "Тема: Підтема" (забудь про двокрапки виду "Трускавець: Фокус на..."). Сформулюй живий, цілісний журналістський заголовок, адаптований під формат "${currentFormat}".
-  - ЧОРНИЙ СПИСОК СЛІВ ДЛЯ EXCERPT (МЕТА-ОПИСУ): Категорично заборонено починати або використовувати в описі слова: "Аналіз", "Огляд", "У цій статті", "Дослідження", "Розгляд". Опис має бути живим, інтригуючим фактом, практичним лайфхаком або закликом до читання для людини, а не технічним звітом. Заборонено згадувати абревіатуру "Google E-E-A-T" у тексті, який бачить читач.
-
-  3. СУХИЙ МЕДИКО-ТУРИСТИЧНИЙ ТОН (Expertise):
-  Пиши впевнено, серйозно та аргументовано. Мінеральні води, джерела чи SPA-процедури мають описуватися з погляду бальнеології, доведеної медицини та реального сервісу, а не "магії". Текст має бути корисним для дорослої людини, яка планує поїздку.
-
-  4. ГЛИБОКА ЛОКАЛЬНА КОНКРЕТИКА (Матчастина) ТА ДОСВІД (Experience):
-  - Обов'язково інтегруй у текст мінімум 3-4 реальні локації, медичні застереження або бальнеологічні факти. Наприклад: мінеральні води (Нафтуся, Марія), їхній хімічний склад (органіка нафтового походження, гідрокарбонати), специфіка прийому (пити виключно через фарфорові куманці/поїлки в бюветі для захисту емалі зубів, втрата лікувальних властивостей на повітрі за 15-20 хвилин), або конкретні діючі комплекси (Mirotel, Rixos, Женева, Карпати, Шале Грааль, джерела Східниці №2с чи №18, спа-готель "Респект").
-  - Органічно вплети у текст фрази: "наша редакція перевірила", "місцеві фахівці радять", "за спостереженнями наших гідів", "відгуки відпочивальників цього сезону підтверджують".
-
-  Поверни відповідь СУВОРO у форматі JSON об'єкта (БЕЗ маркдауну \`\`\`json, просто чистий текст об'єкта):
+  Поверни відповідь СУВОРO у форматі JSON об'єкта:
   {
     "title": "Унікальний журналістський SEO-заголовок (до 60 символів) БЕЗ ДВОКРАПОК, повністю адаптований під формат ${currentFormat}",
     "slug": "url-шлях-транслітом-виключно-через-дефіси",
-    "excerpt": "Живий, нешаблонний анонс для картки (до 150 символів). Жодних слів 'аналіз' або 'огляд'. Почни одразу з дії, інтриги або конкретного факту.",
-    "keywords": "Трускавець, відпочинок Трускавець, санаторії Західної України, Карпати, плюс 2-3 теги тренду",
-    "image_keyword": "одне слово англійською для Unsplash (наприклад: 'spa', 'resort', 'hotel', 'nature')",
-    "content": "Повний текст статті виключно в HTML форматі. Текст має бути розбитий на логічні блоки з підсумковим висновком. Кожен абзац загорни в <p>, підзаголовки структурних блоків в <h3>, списки з порадами/локаціями в <ul><li>. Важливі факти, цифри, назви готелів та джерел виділяй через <strong>. Без знаків переносу рядків \\n."
+    "excerpt": "Живий, нешаблонний анонс для картки (до 150 символів). Жодних слів 'аналіз' або 'огляд'. Почни одразу з дії чи конкретного факту.",
+    "keywords": "Трускавець, відпочинок Трускавець, санаторії Західної України, Карпати, масаж, спа, подорожі",
+    "image_keyword": "одне слово англійською для Unsplash (наприклад: 'spa', 'massage', 'hiking', 'resort')",
+    "content": "Повний текст статті виключно в HTML форматі (<p>, <h3>, <ul><li>, <strong>, <a href='...'>). Текст повинен містити вбудовані внутрішні посилання на попередні статті. Без знаків переносу рядків \\n."
   }`;
 
-  console.log("[Evening-Bot] ⏳ Крок 2: Ініціалізація Gemini моделі...");
-
+  console.log("[Auto-Bot] ⏳ Крок 2: Ініціалізація Gemini моделі зі структурованою схемою...");
   const model = ai.getGenerativeModel({ 
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: {
-        type: SchemaType.OBJECT, // 👈 Рідний Enum конфігурації Google
+        type: SchemaType.OBJECT,
         properties: {
           title: { type: SchemaType.STRING },
           slug: { type: SchemaType.STRING },
@@ -225,9 +218,9 @@ async function runDailyAutoGeneration() {
       }
     }
   });
+
   let responseFromGemini;
   let aiTextOutput = "";
-  
   const maxRetries = 5;
   const fixedWaitTime = 5000;
 
@@ -236,20 +229,9 @@ async function runDailyAutoGeneration() {
       console.log(`[Gemini] Надсилання запиту до ШІ. Спроба №${attempt}...`);
       responseFromGemini = await model.generateContent(prompt);
       aiTextOutput = responseFromGemini.response.text().trim();
-      
-      if (aiTextOutput) {
-        console.log(`[Gemini] 🎉 Успішно отримано відповідь на спробі №${attempt}!`);
-        break; 
-      }
+      if (aiTextOutput) break; 
     } catch (geminiErr: unknown) {
-      const errorMsg = geminiErr instanceof Error ? geminiErr.message : "Невідома помилка ШІ";
-      console.warn(`[Gemini] Спроба №${attempt} провалилася. Помилка: ${errorMsg}`);
-      
-      if (attempt === maxRetries) {
-        throw new Error(`Бот здався після ${maxRetries} спроб достукатися до Gemini із інтервалом у 5 секунд.`);
-      }
-      
-      console.log(`[Gemini] Очікування 5 секунд перед наступною спробою...`);
+      if (attempt === maxRetries) throw geminiErr;
       await new Promise((resolve) => setTimeout(resolve, fixedWaitTime));
     }
   }
@@ -276,7 +258,7 @@ async function runDailyAutoGeneration() {
       keywords: parsedArticle.keywords,
       category: "Блог",
       author_name: "Локальний експерт",
-      author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
+      author_image: "[https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png](https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png)",
       is_published: true,
       image_url: autoImageUrl
     }
@@ -285,15 +267,13 @@ async function runDailyAutoGeneration() {
   if (dbError) throw dbError;
 
   const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
-  
-  // 🔥 Отримуємо живий статус індексації для ранкового автопостингу
   const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
 
   const adminChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
   if (adminChatId) {
     await sendTelegramMessage(
       adminChatId,
-      `🌅 *Ранковий автопостинг виконано!*\n\n🔥 *Тренд ранку:* \`${currentTrendKeyword}\`\n📌 *Нова стаття:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`
+      `🌅 *Ранковий автопостинг виконано!*\n\n🎯 *Вектор аналітики:* \`${selectedNicheVector}\`\n📌 *Нова стаття:* ${parsedArticle.title}\n🔗 [Читати статтю на сайті](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`
     );
   }
 }
@@ -314,7 +294,6 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Помилка крону";
     console.error("🚨 Помилка автогенерації:", msg);
-    
     if (adminChatId) {
       await sendTelegramMessage(adminChatId, `🚨 *Критичний збій ранкового автопостингу:* \`${msg}\``);
     }
@@ -322,7 +301,7 @@ export async function GET(req: Request) {
   }
 }
 
-// 6. ОБРОБНИК POST ЗАПИТІВ (ДЛЯ ТЕЛЕГРАМ-БОТА ЯК І РАНІШЕ)
+// 6. ОБРОБНИК POST ЗАПИТІВ (ДЛЯ ТЕЛЕГРАМ-БОТА)
 export async function POST(req: Request) {
   let chatId = 0;
   try {
@@ -348,7 +327,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "bad_request" });
     }
 
-    await sendTelegramMessage(chatId, "⏳ Посилання отримано! Починаю збір тексту та рерайтинг через Gemini...");
+    await sendTelegramMessage(chatId, "⏳ Посилання отримано! Починаю збір тексту, лінків перелінковки та рерайтинг...");
+
+    // ⛓️ Витягуємо посилання для внутрішньої перелінковки перед рерайтом
+    const { data: recentPosts } = await supabase
+      .from("posts")
+      .select("title, slug")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    const existingLinks: ExistingPostLink[] = recentPosts || [];
+    const linksPromptString = existingLinks.length > 0
+      ? existingLinks.map(p => `- Стаття: [${p.title}](https://detruckavtsi.info/blog/${p.slug})`).join("\n")
+      : "Попередні статті відсутні.";
 
     const response = await axios.get(incomingText, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
@@ -365,10 +357,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "parsing_failed" });
     }
 
-    const prompt = `Ти — експерт із преміального SEO-копірайтингу по Трускавцю. Зроби глибокий авторський рерайт цього тексту українською мовою: ${cleanText}
-    Поверни JSON об'єкт з полями title, slug, excerpt, keywords, image_keyword, content (HTML-формат).`;
+    const prompt = `Ти — експерт із преміального SEO-копірайтингу по Трускавцю та Західній Україні. Твоє завдання — зробити глибокий авторський рерайт цього тексту українською мовою: ${cleanText}
 
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    ⛓️ СУВОРЕ ПРАВИЛО ВНУТРІШНЬОЇ ПЕРЕЛІНКОВКИ (SEO INTERNAL LINKING):
+    Ось список останніх опублікованих статей на нашому сайті:
+    ${linksPromptString}
+    
+    ОБОВ'ЯЗКОВО вибери з цього списку мінімум 1 статтю та органічно інтегруй посилання на неї в HTML-код поля "content": <a href="/blog/slug">природний анкор українською</a>.
+
+    Поверни відповідь СУВОРO у форматі JSON об'єкта через конфігурацію моделі з полями title, slug, excerpt, keywords, image_keyword, content (HTML-формат).`;
+
+    const model = ai.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            title: { type: SchemaType.STRING },
+            slug: { type: SchemaType.STRING },
+            excerpt: { type: SchemaType.STRING },
+            keywords: { type: SchemaType.STRING },
+            image_keyword: { type: SchemaType.STRING },
+            content: { type: SchemaType.STRING }
+          },
+          required: ["title", "slug", "excerpt", "keywords", "image_keyword", "content"]
+        }
+      }
+    });
+
     const responseFromGemini = await model.generateContent(prompt);
     let aiTextOutput = responseFromGemini.response.text().trim();
 
@@ -403,8 +420,6 @@ export async function POST(req: Request) {
     if (dbError) throw dbError;
 
     const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
-    
-    // 🔥 Отримуємо живий статус індексації для ручного Telegram-рерайту
     const indexingResult = await triggerGoogleIndexing(deployedArticleUrl);
 
     await sendTelegramMessage(chatId, `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* ${indexingResult.message}`);
