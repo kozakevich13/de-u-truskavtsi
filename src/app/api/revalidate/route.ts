@@ -28,7 +28,17 @@ export async function POST(request: NextRequest) {
     revalidatePath("/blog", "page");
     revalidatePath("/blog/[slug]", "page");
 
-    // 2. Якщо пост створено АБО оновлено, стукаємо в Google Indexing API
+    // 🛑 ФІЛЬТР ДЛЯ ЧЕРНЕТОК: якщо стаття не опублікована, НЕ шлемо її в Google
+    if (record && record.is_published === false) {
+      console.log(`[Webhook] 🔔 Стаття "${record.title}" є чернеткою. Автоматична індексація заблокована.`);
+      return NextResponse.json({ 
+        revalidated: true, 
+        googleIndexed: false,
+        reason: "Draft article ignored for indexing"
+      });
+    }
+
+    // 2. Якщо пост створено АБО оновлено І він публічний, стукаємо в Google Indexing API
     const shouldIndex = (type === "INSERT" || type === "UPDATE") && record && record.slug;
 
     if (shouldIndex) {
