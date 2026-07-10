@@ -211,21 +211,21 @@ export async function POST(request: Request) {
         // Прибираємо старі кнопки
         await editTelegramMessageText(chatId, messageId, `📥 *Чернетка опрацьована:* Надіслано команду на публікацію.`);
 
-        // Конструюємо пряме посилання для перевірки індексації в Google Search Console
-        const gscLink = `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent("sc-domain:detruckavtsi.info")}&id=${encodeURIComponent(deployedArticleUrl)}`;
+        // Стабільне офіційне посилання на робочий простір інспектування твого домену
+        const gscLink = `https://search.google.com/search-console/inspect?resource_id=sc-domain:detruckavtsi.info`;
 
         const successKeyboard = {
           inline_keyboard: [
             [
-              { text: "🔍 Перевірити індексацію в GSC", url: gscLink }
+              { text: "🔍 Відкрити Search Console", url: gscLink }
             ]
           ]
         };
 
-        // Надсилаємо повідомлення про успіх разом із кнопкою GSC
+        // Надсилаємо повідомлення про успіх (URL обгорнуто в зворотні лапки для копіювання в 1 клік)
         await sendTelegramWithButtons(
           chatId,
-          `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть кнопку нижче, щоб швидко надіслати запит на індексацію сторінки.`,
+          `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть по URL нижче, щоб скопіювати його, відкрийте Search Console та вставте в рядок пошуку вгорі:\n\n\`${deployedArticleUrl}\``,
           successKeyboard
         );
       } 
@@ -352,21 +352,20 @@ export async function POST(request: Request) {
 
       const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
       
-      // Конструюємо пряме посилання для перевірки індексації в Google Search Console
-      const gscLink = `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent("sc-domain:detruckavtsi.info")}&id=${encodeURIComponent(deployedArticleUrl)}`;
+      const gscLink = `https://search.google.com/search-console/inspect?resource_id=sc-domain:detruckavtsi.info`;
 
       const rewriteSuccessKeyboard = {
         inline_keyboard: [
           [
-            { text: "🔍 Перевірити індексацію в GSC", url: gscLink }
+            { text: "🔍 Відкрити Search Console", url: gscLink }
           ]
         ]
       };
 
-      // Надсилаємо фінальне повідомлення про успіх рерайту разом із кнопкою GSC
+      // Надсилаємо повідомлення про успіх рерайту
       await sendTelegramWithButtons(
         chatId, 
-        `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Скористайтеся кнопкою нижче для миттєвої перевірки та надсилання індексації.`,
+        `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть по URL нижче, щоб скопіювати його, перейдіть у Search Console та вставте для перевірки:\n\n\`${deployedArticleUrl}\``,
         rewriteSuccessKeyboard
       );
       
