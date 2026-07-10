@@ -6,6 +6,7 @@ import * as cheerio from "cheerio";
 import axios from "axios";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { getDraftArticlePrompt, getRewriteArticlePrompt } from "./prompts";
+import { fetchUnsplashPhoto } from "./unsplash";
 import { 
   sendTelegramMessage, 
   sendTelegramWithButtons, 
@@ -37,35 +38,6 @@ const NICHE_KEYWORDS = [
   "Масаж та SPA (лікувальний масаж, термальні басейни, детокс-програми)",
   "Походи, екскурсії та подорожі (природа Карпат, Скелі Довбуша, Тустань, водоспади)"
 ];
-
-// Автопідбір фото через Unsplash
-async function fetchUnsplashPhoto(keyword: string): Promise<string> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) return "/images/posts/default-truskavets.jpg";
-
-  try {
-    const refinedQuery = `Carpathians Ukraine ${keyword}`;
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(refinedQuery)}&orientation=landscape&client_id=${accessKey}`,
-      { method: "GET" }
-    );
-    if (!res.ok) {
-      const fallbackRes = await fetch(
-        `https://api.unsplash.com/photos/random?query=Carpathians&orientation=landscape&client_id=${accessKey}`,
-        { method: "GET" }
-      );
-      if (fallbackRes.ok) {
-        const fallbackData = await fallbackRes.json();
-        return fallbackData?.urls?.regular || "/images/posts/default-truskavets.jpg";
-      }
-      return "/images/posts/default-truskavets.jpg";
-    }
-    const data = await res.json();
-    return data?.urls?.regular || "/images/posts/default-truskavets.jpg";
-  } catch (err) {
-    return "/images/posts/default-truskavets.jpg";
-  }
-}
 
 // Функція для створення чернетки
 async function generateDraftArticle() {
@@ -190,7 +162,6 @@ export async function POST(request: Request) {
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data as string;
 
-      // Знімаємо завантаження з кнопки в ТГ
       await answerCallbackQuery(callbackQuery.id);
 
       // Логіка кліку "Опублікувати"
@@ -208,10 +179,8 @@ export async function POST(request: Request) {
 
         const deployedArticleUrl = `https://detruckavtsi.info/blog/${updatedPost.slug}`;
 
-        // Прибираємо старі кнопки
         await editTelegramMessageText(chatId, messageId, `📥 *Чернетка опрацьована:* Надіслано команду на публікацію.`);
 
-        // Стабільне офіційне посилання на робочий простір інспектування твого домену
         const gscLink = `https://search.google.com/search-console/inspect?resource_id=sc-domain:detruckavtsi.info`;
 
         const successKeyboard = {
@@ -222,7 +191,6 @@ export async function POST(request: Request) {
           ]
         };
 
-        // Надсилаємо повідомлення про успіх (URL обгорнуто в зворотні лапки для копіювання в 1 клік)
         await sendTelegramWithButtons(
           chatId,
           `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть по URL нижче, щоб скопіювати його, відкрийте Search Console та вставте в рядок пошуку вгорі:\n\n\`${deployedArticleUrl}\``,
@@ -234,13 +202,10 @@ export async function POST(request: Request) {
       if (data.startsWith("regen_")) {
         const postId = data.replace("regen_", "");
 
-        // Видаляємо невдалу чернетку з бази
         await supabase.from("posts").delete().eq("id", postId);
 
-        // Оновлюємо інтерфейс
         await editTelegramMessageText(chatId, messageId, "🔄 Чернетку видалено. Запускаю повторну генерацію нового варіанту...");
 
-        // Запускаємо генерацію нової чернетки з нуля
         await generateDraftArticle();
       }
 
@@ -343,7 +308,7 @@ export async function POST(request: Request) {
           category: "Блог",
           author_name: "Гід",
           author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
-          is_published: true, // Ручний рерайт публікуємо миттєво
+          is_published: true, 
           image_url: autoImageUrl
         }
       ]);
@@ -362,7 +327,6 @@ export async function POST(request: Request) {
         ]
       };
 
-      // Надсилаємо повідомлення про успіх рерайту
       await sendTelegramWithButtons(
         chatId, 
         `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть по URL нижче, щоб скопіювати його, перейдіть у Search Console та вставте для перевірки:\n\n\`${deployedArticleUrl}\``,
