@@ -2,19 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
-export const runtime = "nodejs"; // 👈 Змушує Vercel використовувати повне серверне залізо Node.js
-import { JWT } from "google-auth-library";
+export const runtime = "nodejs"; 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { getDraftArticlePrompt, getRewriteArticlePrompt } from "./prompts";
 
-interface GoogleApiErrorResponse {
-  response?: {
-    data?: {
-      error?: {
-        message?: string;
-      };
-    };
-  };
-}
 
 interface ExistingPostLink {
   title: string;
@@ -26,10 +17,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Ініціалізація Gemini
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// Стратегічний нішевий масив для генерації та пошуку ідей
 const NICHE_KEYWORDS = [
   "Трускавець (санаторії, бювет, ціни, відпочинок)",
   "Східниця (джерела, спа-готелі, релакс, приватний сектор)",
@@ -39,7 +28,6 @@ const NICHE_KEYWORDS = [
   "Походи, екскурсії та подорожі (природа Карпат, Скелі Довбуша, Тустань, водоспади)"
 ];
 
-// 1. Функція відправки повідомлень у Telegram
 async function sendTelegramMessage(chatId: number, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId) return;
@@ -56,7 +44,6 @@ async function sendTelegramMessage(chatId: number, text: string) {
   }
 }
 
-// Функція для надсилання повідомлень з Inline-кнопками (Використовується при перегенерації)
 async function sendTelegramWithButtons(chatId: number, text: string, replyMarkup: object) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || !chatId) return;
@@ -76,7 +63,6 @@ async function sendTelegramWithButtons(chatId: number, text: string, replyMarkup
   }
 }
 
-// 2. Автопідбір фото через Unsplash
 async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   const accessKey = process.env.UNSPLASH_ACCESS_KEY;
   if (!accessKey) return "/images/posts/default-truskavets.jpg";
@@ -105,7 +91,6 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   }
 }
 
-// Функція для створення чернетки (викликається при GET або при натисканні кнопки "Перегенерувати")
 async function generateDraftArticle() {
   const selectedNicheVector = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
   
@@ -129,36 +114,7 @@ async function generateDraftArticle() {
   ];
   const currentFormat = formats[Math.floor(Math.random() * formats.length)];
 
-  const prompt = `Ти — авторитетний локальний журналіст, аналітик туристичного порталу "Гід Трускавця" та провідний експерт із копірайтингу за стандартами Google E-E-A-T.
-  Зараз червень 2026 року (активний сезон літніх подорожей, високий попит на квитки, спека, потреба людей у фізичному оздоровленні та знятті стресу в Україні).
-
-  Твоє завдання — змоделювати актуальний пошуковий тренд та написати корисну, фактологічну статтю українською мовою у форматі: **${currentFormat}**.
-  Стаття має базуватися НАЙПЕРШЕ на аналізі актуальних потреб українців у межах цього нішевого напрямку: "${selectedNicheVector}".
-  Подумай, які практичні нюанси люди шукають у Google за цим напрямком прямо зараз (ціни 2026 року, реальні умови, як підібрати джерело, протипоказання Нафтусі, де знайти професійний масаж, безпечні маршрути в горах) і побудуй навколо цього експертний матеріал.
-
-  ⛓️ СУВОРЕ ПРАВИЛО ВНУТРІШНЬОЇ ПЕРЕЛІНКОВКИ (SEO INTERNAL LINKING):
-  Ось список останніх опублікованих статей на нашому сайті:
-  ${linksPromptString}
-  
-  Тобі потрібно ОБОВ'ЯЗКОВО обрати з цього списку мінімум 1 (або максимум 2) найбільш релевантні за змістом статті та органічно вбудувати посилання на них всередину HTML тексту поля "content". 
-  Посилання має мати вигляд: <a href="/blog/тут-slug-з-списку">природний текст анкору українською мовою</a>. 
-  Анкор повинен ідеально підходити за змістом речення, бути читабельним і не виглядати як спам. Заборонено використовувати слова "читайте тут", "посилання".
-
-  СУВОРІ ПРАВИЛА ДЛЯ ОБХОДУ ФІЛЬТРІВ GOOGLE:
-  1. КАТЕГОРИЧНО ЗАБОРОНЕНІ ШІ-КЛІШЕ ТА ГІПЕРБОЛІЗАЦІЯ: Жодних "шалений тренд", "бум запитів", "Доброго ранку, друзі!", "магічна вода", "пристібніть паски". Починай статтю одразу з контексту чи аналітики відповідно до стилю "${currentFormat}".
-  2. СУВОРЕ ТАБУ НА ОДНОТИПНІ ЗАГОЛОВКИ ТА МЕТА-ОПИСИ (АНТИ-ШАБЛОН): КАТЕГОРИЧНО ЗАБОРОНЕНО будувати заголовки за схемою "Тема: Підтема" (без двокрапок). Заборонено починати опис (excerpt) зі слів: "Аналіз", "Огляд", "У цій статті", "Дослідження".
-  3. СУХИЙ МЕДИКО-ТУРИСТИЧНИЙ ТОН: Описуй процеси з погляду бальнеології, доведеної медицини та реального сервісу, а не "магії".
-  4. ЛОКАЛЬНА КОНКРЕТИКА: Інтегруй у текст мінімум 3-4 реальні локації чи факти (Mirotel, Rixos, Шале Грааль, джерела Східниці №2с чи №18, пити через куманці, втрата властивостей Нафтусі за 15-20 хвилин на повітрі через окиснення органіки).
-
-  Поверни відповідь СУВОРO у форматі JSON об'єкта:
-  {
-    "title": "Унікальний журналістський SEO-заголовок (до 60 символів) БЕЗ ДВОКРАПОК, повністю адаптований під формат ${currentFormat}",
-    "slug": "url-шлях-транслітом-виключно-через-дефіси",
-    "excerpt": "Живий, нешаблонний анонс для картки (до 150 символів). Жодних слів 'аналіз' або 'огляд'. Почни одразу з дії чи конкретного факту.",
-    "keywords": "Трускавець, відпочинок Трускавець, санаторії Західної України, Карпати, масаж, спа, подорожі",
-    "image_keyword": "одне слово англійською для Unsplash (наприклад: 'spa', 'massage', 'hiking', 'resort')",
-    "content": "Повний текст статті виключно в HTML форматі (<p>, <h3>, <ul><li>, <strong>, <a href='...'>). Текст повинен містити вбудовані внутрішні посилання на попередні статті. Без знаків переносу рядків \\n."
-  }`;
+  const prompt = getDraftArticlePrompt(currentFormat, selectedNicheVector, linksPromptString);
 
   const model = ai.getGenerativeModel({ 
     model: "gemini-2.5-flash",
@@ -244,51 +200,27 @@ async function generateDraftArticle() {
   }
 }
 
-// 5. ОБРОБНИК GET ЗАПИТІВ (ДЛЯ КРОНУ — ГЕНЕРУЄ ЧЕРНЕТКУ)
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const secret = searchParams.get("secret");
-
-    if (secret !== process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await generateDraftArticle();
-    return NextResponse.json({ success: true, message: "Чернетку створено успішно!" });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Помилка роботи скрипта";
-    console.error("🚨 Помилка автогенерації чернетки:", msg);
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
-  }
-}
-
-// 6. ОБРОБНИК POST ЗАПИТІВ (Єдиний центр Telegram: Кнопки + Ручний рерайт)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const allowedChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
 
-    // --- 🅰️ ОБРОБКА КЛІКІВ ПО КНОПКАХ (Inline callback_query) ---
     if (body?.callback_query) {
       const callbackQuery = body.callback_query;
       const chatId = callbackQuery.message.chat.id;
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data as string;
 
-      // Знімаємо завантаження з кнопки в ТГ
       await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ callback_query_id: callbackQuery.id })
       });
 
-      // Логіка кліку "Опублікувати"
       if (data.startsWith("pub_")) {
         const postId = data.replace("pub_", "");
 
-        // Оновлюємо статус на TRUE. Вебхук /api/revalidate сам запустить індексацію!
         const { data: updatedPost, error: fetchErr } = await supabase
           .from("posts")
           .update({ is_published: true, created_at: new Date().toISOString() }) 
@@ -300,7 +232,6 @@ export async function POST(request: Request) {
 
         const deployedArticleUrl = `https://detruckavtsi.info/blog/${updatedPost.slug}`;
 
-        // Прибираємо кнопки зі старого повідомлення
         await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -311,21 +242,17 @@ export async function POST(request: Request) {
           })
         });
 
-        // Надсилаємо окреме нове повідомлення про успіх
         await sendTelegramMessage(
           chatId,
           `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Запит автоматично передано в Search Console через Supabase Webhook.`
         );
       } 
       
-      // Логіка кліку "Перегенерувати"
       if (data.startsWith("regen_")) {
         const postId = data.replace("regen_", "");
 
-        // Видаляємо невдалу чернетку з бази
         await supabase.from("posts").delete().eq("id", postId);
 
-        // Оновлюємо інтерфейс
         await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -336,14 +263,12 @@ export async function POST(request: Request) {
           })
         });
 
-        // Запускаємо генерацію нової чернетки з нуля
         await generateDraftArticle();
       }
 
       return NextResponse.json({ status: "success" });
     }
 
-    // --- 🅱️ ОБРОБКА ТЕКСТОВИХ ПОВІДОМЛЕНЬ (Твій ручний рерайт посилань) ---
     if (body?.message?.text) {
       const chatId = body.message.chat.id;
       const incomingText = body.message.text.trim();
@@ -365,7 +290,6 @@ export async function POST(request: Request) {
 
       await sendTelegramMessage(chatId, "⏳ Посилання отримано! Починаю збір тексту, лінків перелінковки та рерайтинг...");
 
-      // Витягуємо посилання для внутрішньої перелінковки перед рерайтом
       const { data: recentPosts } = await supabase
         .from("posts")
         .select("title, slug")
@@ -393,15 +317,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ status: "parsing_failed" });
       }
 
-      const prompt = `Ти — експерт із преміального SEO-копірайтингу по Трускавцю та Західній Україні. Твоє завдання — зробити глибокий авторський рерайт цього тексту українською мовою: ${cleanText}
-
-      ⛓️ СУВОРЕ ПРАВИЛО ВНУТРІШНЬОЇ ПЕРЕЛІНКОВКИ (SEO INTERNAL LINKING):
-      Ось список останніх опублікованих статей на нашому сайті:
-      ${linksPromptString}
-      
-      ОБОВ'ЯЗКОВО вибери з цього списку мінімум 1 статтю та органічно інтегруй посилання на неї в HTML-код поля "content": <a href="/blog/slug">природний анкор українською</a>.
-
-      Поверни відповідь СУВОРO у форматі JSON об'єкта через конфігурацію моделі з полями title, slug, excerpt, keywords, image_keyword, content (HTML-формат).`;
+      const prompt = getRewriteArticlePrompt(cleanText, linksPromptString);
 
       const model = ai.getGenerativeModel({ 
         model: "gemini-2.5-flash",
@@ -448,7 +364,7 @@ export async function POST(request: Request) {
           category: "Блог",
           author_name: "Гід",
           author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
-          is_published: true, // Ручний рерайт публікуємо миттєво
+          is_published: true, 
           image_url: autoImageUrl
         }
       ]);
