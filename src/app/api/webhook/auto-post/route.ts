@@ -1,3 +1,5 @@
+// route.ts
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
@@ -23,8 +25,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Ініціалізація Gemini
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+// Стратегічний нішевий масив для генерації та пошуку ідей
 const NICHE_KEYWORDS = [
   "Трускавець (санаторії, бювет, ціни, відпочинок)",
   "Східниця (джерела, спа-готелі, релакс, приватний сектор)",
@@ -63,6 +67,7 @@ async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   }
 }
 
+// Функція для створення чернетки
 async function generateDraftArticle() {
   const selectedNicheVector = NICHE_KEYWORDS[Math.floor(Math.random() * NICHE_KEYWORDS.length)];
   
@@ -185,7 +190,7 @@ export async function POST(request: Request) {
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data as string;
 
-      // Знімаємо завантаження з кнопки в ТГ за допомогою нового сервісу
+      // Знімаємо завантаження з кнопки в ТГ
       await answerCallbackQuery(callbackQuery.id);
 
       // Логіка кліку "Опублікувати"
@@ -203,13 +208,25 @@ export async function POST(request: Request) {
 
         const deployedArticleUrl = `https://detruckavtsi.info/blog/${updatedPost.slug}`;
 
-        // Прибираємо кнопки за допомогою нового сервісу
+        // Прибираємо старі кнопки
         await editTelegramMessageText(chatId, messageId, `📥 *Чернетка опрацьована:* Надіслано команду на публікацію.`);
 
-        // Надсилаємо окреме нове повідомлення про успіх
-        await sendTelegramMessage(
+        // Конструюємо пряме посилання для перевірки індексації в Google Search Console
+        const gscLink = `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent("sc-domain:detruckavtsi.info")}&id=${encodeURIComponent(deployedArticleUrl)}`;
+
+        const successKeyboard = {
+          inline_keyboard: [
+            [
+              { text: "🔍 Перевірити індексацію в GSC", url: gscLink }
+            ]
+          ]
+        };
+
+        // Надсилаємо повідомлення про успіх разом із кнопкою GSC
+        await sendTelegramWithButtons(
           chatId,
-          `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Запит автоматично передано в Search Console через Supabase Webhook.`
+          `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Клацніть кнопку нижче, щоб швидко надіслати запит на індексацію сторінки.`,
+          successKeyboard
         );
       } 
       
@@ -220,7 +237,7 @@ export async function POST(request: Request) {
         // Видаляємо невдалу чернетку з бази
         await supabase.from("posts").delete().eq("id", postId);
 
-        // Оновлюємо інтерфейс за допомогою нового сервісу
+        // Оновлюємо інтерфейс
         await editTelegramMessageText(chatId, messageId, "🔄 Чернетку видалено. Запускаю повторну генерацію нового варіанту...");
 
         // Запускаємо генерацію нової чернетки з нуля
@@ -230,6 +247,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: "success" });
     }
 
+    // --- 🅱️ ОБРОБКА ТЕКСТОВИХ ПОВІДОМЛЕНЬ (Ручний рерайт посилань) ---
     if (body?.message?.text) {
       const chatId = body.message.chat.id;
       const incomingText = body.message.text.trim();
@@ -325,7 +343,7 @@ export async function POST(request: Request) {
           category: "Блог",
           author_name: "Гід",
           author_image: "https://hygafhwozykocomdbadm.supabase.co/storage/v1/object/public/images/places/rgr95i891c.png",
-          is_published: true, 
+          is_published: true, // Ручний рерайт публікуємо миттєво
           image_url: autoImageUrl
         }
       ]);
@@ -334,7 +352,24 @@ export async function POST(request: Request) {
 
       const deployedArticleUrl = `https://detruckavtsi.info/blog/${uniqueSlug}`;
       
-      await sendTelegramMessage(chatId, `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Запит успішно надіслано через автоматичний Supabase Webhook.`);
+      // Конструюємо пряме посилання для перевірки індексації в Google Search Console
+      const gscLink = `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent("sc-domain:detruckavtsi.info")}&id=${encodeURIComponent(deployedArticleUrl)}`;
+
+      const rewriteSuccessKeyboard = {
+        inline_keyboard: [
+          [
+            { text: "🔍 Перевірити індексацію в GSC", url: gscLink }
+          ]
+        ]
+      };
+
+      // Надсилаємо фінальне повідомлення про успіх рерайту разом із кнопкою GSC
+      await sendTelegramWithButtons(
+        chatId, 
+        `🎉 *Рерайт готовий!* Статтю опубліковано.\n\n📌 *Заголовок:* ${parsedArticle.title}\n🔗 [Читати](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Скористайтеся кнопкою нижче для миттєвої перевірки та надсилання індексації.`,
+        rewriteSuccessKeyboard
+      );
+      
       return NextResponse.json({ status: "success" });
     }
 
