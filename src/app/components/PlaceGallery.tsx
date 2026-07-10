@@ -48,6 +48,7 @@ export default function PlaceGallery({
               height={1000}
               className="h-[320px] w-full object-cover md:h-[520px]"
               priority
+              unoptimized 
             />
           ) : (
             <div className="flex h-[320px] w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 md:h-[520px]">
@@ -72,6 +73,7 @@ export default function PlaceGallery({
                     width={800}
                     height={600}
                     className="h-[155px] w-full object-cover md:h-[255px]"
+                    unoptimized 
                   />
                   
                   {isLastVisible && (
@@ -119,7 +121,7 @@ export default function PlaceGallery({
               alt={`${placeName} - повний розмір`}
               fill
               className="object-contain"
-              quality={100}
+              unoptimized 
             />
           </div>
 

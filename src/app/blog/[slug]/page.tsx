@@ -125,6 +125,7 @@ export default async function PostPage({ params }: Props) {
                     height={600}
                     priority 
                     className="w-full h-full object-cover aspect-[4/3] hover:scale-105 transition-transform duration-700" 
+                    unoptimized
                   />
                 </div>
               </div>
@@ -144,6 +145,7 @@ export default async function PostPage({ params }: Props) {
                         fill
                         sizes="48px"
                         className="object-cover" 
+                        unoptimized
                       />
                     )}
                   </div>
