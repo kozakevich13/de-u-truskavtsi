@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import * as cheerio from "cheerio";
 import axios from "axios";
-export const runtime = "nodejs"; 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { getDraftArticlePrompt, getRewriteArticlePrompt } from "./prompts";
+import { 
+  sendTelegramMessage, 
+  sendTelegramWithButtons, 
+  answerCallbackQuery, 
+  editTelegramMessageText 
+} from "./telegram";
 
+export const runtime = "nodejs"; // Змушує Vercel використовувати повне серверне залізо Node.js
 
 interface ExistingPostLink {
   title: string;
@@ -28,41 +34,7 @@ const NICHE_KEYWORDS = [
   "Походи, екскурсії та подорожі (природа Карпат, Скелі Довбуша, Тустань, водоспади)"
 ];
 
-async function sendTelegramMessage(chatId: number, text: string) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token || !chatId) return;
-  try {
-    console.log(`[Telegram] Надсилання сповіщення для чату ${chatId}...`);
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" }),
-    });
-    console.log("[Telegram] ✅ Сповіщення успішно надіслано.");
-  } catch (err) {
-    console.error("[Telegram] ❌ Помилка відправки:", err);
-  }
-}
-
-async function sendTelegramWithButtons(chatId: number, text: string, replyMarkup: object) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token || !chatId) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        chat_id: chatId, 
-        text: text, 
-        parse_mode: "Markdown",
-        reply_markup: replyMarkup
-      }),
-    });
-  } catch (err) {
-    console.error("[Telegram] ❌ Помилка відправки кнопок:", err);
-  }
-}
-
+// Автопідбір фото через Unsplash
 async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   const accessKey = process.env.UNSPLASH_ACCESS_KEY;
   if (!accessKey) return "/images/posts/default-truskavets.jpg";
@@ -200,24 +172,23 @@ async function generateDraftArticle() {
   }
 }
 
+// ОБРОБНИК POST ЗАПИТІВ (Єдиний центр Telegram)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const token = process.env.TELEGRAM_BOT_TOKEN;
     const allowedChatId = Number(process.env.MY_TELEGRAM_CHAT_ID);
 
+    // --- 🅰️ ОБРОБКА КЛІКІВ ПО КНОПКАХ (Inline callback_query) ---
     if (body?.callback_query) {
       const callbackQuery = body.callback_query;
       const chatId = callbackQuery.message.chat.id;
       const messageId = callbackQuery.message.message_id;
       const data = callbackQuery.data as string;
 
-      await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callback_query_id: callbackQuery.id })
-      });
+      // Знімаємо завантаження з кнопки в ТГ за допомогою нового сервісу
+      await answerCallbackQuery(callbackQuery.id);
 
+      // Логіка кліку "Опублікувати"
       if (data.startsWith("pub_")) {
         const postId = data.replace("pub_", "");
 
@@ -232,37 +203,27 @@ export async function POST(request: Request) {
 
         const deployedArticleUrl = `https://detruckavtsi.info/blog/${updatedPost.slug}`;
 
-        await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            message_id: messageId,
-            text: `📥 *Чернетка опрацьована:* Надіслано команду на публікацію.`
-          })
-        });
+        // Прибираємо кнопки за допомогою нового сервісу
+        await editTelegramMessageText(chatId, messageId, `📥 *Чернетка опрацьована:* Надіслано команду на публікацію.`);
 
+        // Надсилаємо окреме нове повідомлення про успіх
         await sendTelegramMessage(
           chatId,
           `🎉 *Статтю успішно опубліковано на сайті!*\n\n📌 *Назва:* ${updatedPost.title}\n🔗 [Читати статтю на detruckavtsi.info](${deployedArticleUrl})\n\n⚡ *Google Indexing:* Запит автоматично передано в Search Console через Supabase Webhook.`
         );
       } 
       
+      // Логіка кліку "Перегенерувати"
       if (data.startsWith("regen_")) {
         const postId = data.replace("regen_", "");
 
+        // Видаляємо невдалу чернетку з бази
         await supabase.from("posts").delete().eq("id", postId);
 
-        await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            chat_id: chatId, 
-            message_id: messageId, 
-            text: "🔄 Чернетку видалено. Запускаю повторну генерацію нового варіанту..." 
-          })
-        });
+        // Оновлюємо інтерфейс за допомогою нового сервісу
+        await editTelegramMessageText(chatId, messageId, "🔄 Чернетку видалено. Запускаю повторну генерацію нового варіанту...");
 
+        // Запускаємо генерацію нової чернетки з нуля
         await generateDraftArticle();
       }
 
