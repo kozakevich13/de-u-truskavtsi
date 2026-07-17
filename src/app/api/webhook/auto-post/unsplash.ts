@@ -59,10 +59,13 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
 
   // 1. Беремо перші 2 теги для основного пошуку
   const primaryTags = allTags.slice(0, 2).join(", ");
+  
+  // ЛОГ: Виводимо оригінальні слова для основного пошуку
+  console.log(`[Unsplash Tags] 🎯 Для ОСНОВНОГО пошуку обрано теги: "${primaryTags}"`);
 
   try {
     const translatedQuery = await translateToEnglish(primaryTags);
-    console.log(`[Unsplash Search] 🔍 Основний запит: "${translatedQuery}"`);
+    console.log(`[Unsplash Search] 🔍 Основний запит після перекладу: "${translatedQuery}"`);
 
     const res = await fetch(
       `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
@@ -73,12 +76,14 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
       console.warn(`[Unsplash] ⚠️ За основним запитом "${translatedQuery}" нічого не знайдено.`);
       
       // 2. РЕЗЕРВНИЙ ПОШУК: Намагаємося взяти НАСТУПНІ 3 теги з оригінального списку
-      // Наприклад, якщо було 14 тегів, ми пропустимо перші 2 і візьмемо 3-й, 4-й та 5-й.
       const fallbackTags = allTags.slice(2, 5).join(", ");
 
       if (fallbackTags) {
+        // ЛОГ: Виводимо оригінальні слова для резервного пошуку
+        console.log(`[Unsplash Tags] 🔄 ОСНОВНИЙ пошук впав. Для РЕЗЕРВНОГО пошуку беру теги: "${fallbackTags}"`);
+
         const translatedFallback = await translateToEnglish(fallbackTags);
-        console.log(`[Unsplash Search] 🔄 Спроба резервного пошуку за наступними тегами: "${translatedFallback}"`);
+        console.log(`[Unsplash Search] 🔄 Резервний запит після перекладу: "${translatedFallback}"`);
 
         const fallbackRes = await fetch(
           `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedFallback)}&orientation=landscape&client_id=${accessKey}`,
