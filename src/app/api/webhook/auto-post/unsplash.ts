@@ -1,10 +1,8 @@
-import translate from 'google-translate-api-next';
-
 const accessKey = process.env.UNSPLASH_ACCESS_KEY;
 const DEFAULT_FALLBACK_IMAGE = "/images/posts/default-truskavets.jpg";
 
 /**
- * Додає параметри оптимізації Unsplash до URL
+ * Оптимізація URL Unsplash
  */
 function optimizeUnsplashUrl(url: string): string {
   if (!url || !url.includes("images.unsplash.com")) return url;
@@ -21,51 +19,58 @@ function optimizeUnsplashUrl(url: string): string {
 }
 
 /**
- * Перекладає текст англійською мовою. 
- * Якщо переклад не вдається, повертає оригінальний текст.
+ * Швидкий безкоштовний переклад тексту англійською мовою через API
  */
 async function translateToEnglish(text: string): Promise<string> {
   try {
-    // Автоматично визначає мову (наприклад, українську) і перекладає на англійську (en)
-    const res = await translate(text, { to: 'en' });
-    return res.text || text;
+    const response = await fetch(
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`
+    );
+    if (!response.ok) return text;
+    
+    const data = await response.json();
+    // Збираємо перекладений рядок докупи
+    const translatedText = data[0].map((item: any) => item[0]).join("");
+    return translatedText || text;
   } catch (err) {
-    console.error("[Translation Service] ❌ Помилка перекладу тайтлу:", err);
-    return text; // fallback до оригіналу, якщо сервіс ліг
+    console.error("[Translate] ❌ Помилка перекладу:", err);
+    return text; // Якщо впав переклад, повертаємо оригінал
   }
 }
 
 /**
- * Шукає випадкове фото на Unsplash.
- * Автоматично перекладає назву статті англійською для кращого пошуку.
+ * Шукає випадкове релевантне фото на Unsplash за ключовими словами статті.
+ * Автоматично перекладає кирилицю англійською мовою.
  */
-export async function fetchUnsplashPhoto(articleTitle: string): Promise<string> {
+export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   if (!accessKey) return DEFAULT_FALLBACK_IMAGE;
 
-  const cleanTitle = articleTitle.trim();
-  if (!cleanTitle) return DEFAULT_FALLBACK_IMAGE;
+  const cleanKeyword = keyword.trim();
+  if (!cleanKeyword) return DEFAULT_FALLBACK_IMAGE;
 
   try {
-    // Перекладаємо назву статті англійською мовою
-    const translatedQuery = await translateToEnglish(cleanTitle);
-    console.log(`[Unsplash Search] 🔍 Шукаю фото за запитом: "${translatedQuery}" (оригінал: "${cleanTitle}")`);
+    // 1. Перекладаємо ключові слова англійською (наприклад: "іспанська кухня" -> "spanish cuisine")
+    const translatedQuery = await translateToEnglish(cleanKeyword);
+    console.log(`[Unsplash Search] 🔍 Запит після перекладу: "${translatedQuery}"`);
 
-    // 1. Основний пошук за англійським перекладом назви
+    // 2. Основний пошук за перекладеними словами
     const res = await fetch(
       `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
       { method: "GET" }
     );
 
     if (!res.ok) {
-      // 2. Резервний пошук, якщо за специфічним тайтлом нічого не знайшлося
+      console.warn(`[Unsplash] ⚠️ За запитом "${translatedQuery}" нічого не знайдено. Пробую нейтральний фолбек.`);
+      
+      // 3. Нейтральний резервний пошук (БЕЗ Карпат), наприклад просто ресторан, подорож або спа
       const fallbackRes = await fetch(
-        `https://api.unsplash.com/photos/random?query=nature&orientation=landscape&client_id=${accessKey}`,
+        `https://api.unsplash.com/photos/random?query=restaurant,travel&orientation=landscape&client_id=${accessKey}`,
         { method: "GET" }
       );
       
       if (fallbackRes.ok) {
         const fallbackData = await fallbackRes.json();
-        const rawUrl = fallbackData?.urls?.regular;
+        const rawUrl = fallbackData?.urls?.regular; // замінено з .raw на .regular
         return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
       }
       return DEFAULT_FALLBACK_IMAGE;
@@ -75,7 +80,7 @@ export async function fetchUnsplashPhoto(articleTitle: string): Promise<string> 
     const rawUrl = data?.urls?.regular;
     return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
   } catch (err) {
-    console.error("[Unsplash Service] ❌ Помилка підбору фото:", err);
+    console.error("[Unsplash Service] ❌ Критична помилка підбору фото:", err);
     return DEFAULT_FALLBACK_IMAGE;
   }
 }
