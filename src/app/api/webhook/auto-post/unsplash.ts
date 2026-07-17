@@ -28,10 +28,8 @@ async function translateToEnglish(text: string): Promise<string> {
     );
     if (!response.ok) return text;
     
-    // Структура відповіді Google API: [[["перекладений_текст", "оригінал", ...]], ...]
     const data = (await response.json()) as [Array<[string, string, ...unknown[]]>, ...unknown[]];
     
-    // Безпечно збираємо перекладені частини тексту
     if (data && data[0]) {
       const translatedText = data[0].map((item) => item[0]).join("");
       return translatedText || text;
@@ -51,12 +49,20 @@ async function translateToEnglish(text: string): Promise<string> {
 export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   if (!accessKey) return DEFAULT_FALLBACK_IMAGE;
 
-  const cleanKeyword = keyword.trim();
-  if (!cleanKeyword) return DEFAULT_FALLBACK_IMAGE;
+  const rawKeyword = keyword.trim();
+  if (!rawKeyword) return DEFAULT_FALLBACK_IMAGE;
+
+  // Розбиваємо всі теги у масив
+  const allTags = rawKeyword.includes(",") 
+    ? rawKeyword.split(",").map(t => t.trim()).filter(Boolean)
+    : [rawKeyword];
+
+  // 1. Беремо перші 2 теги для основного пошуку
+  const primaryTags = allTags.slice(0, 2).join(", ");
 
   try {
-    const translatedQuery = await translateToEnglish(cleanKeyword);
-    console.log(`[Unsplash Search] 🔍 Запит після перекладу: "${translatedQuery}"`);
+    const translatedQuery = await translateToEnglish(primaryTags);
+    console.log(`[Unsplash Search] 🔍 Основний запит: "${translatedQuery}"`);
 
     const res = await fetch(
       `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
@@ -64,18 +70,41 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
     );
 
     if (!res.ok) {
-      console.warn(`[Unsplash] ⚠️ За запитом "${translatedQuery}" нічого не знайдено. Пробую нейтральний фолбек.`);
+      console.warn(`[Unsplash] ⚠️ За основним запитом "${translatedQuery}" нічого не знайдено.`);
       
-      const fallbackRes = await fetch(
-        `https://api.unsplash.com/photos/random?query=restaurant,travel&orientation=landscape&client_id=${accessKey}`,
+      // 2. РЕЗЕРВНИЙ ПОШУК: Намагаємося взяти НАСТУПНІ 3 теги з оригінального списку
+      // Наприклад, якщо було 14 тегів, ми пропустимо перші 2 і візьмемо 3-й, 4-й та 5-й.
+      const fallbackTags = allTags.slice(2, 5).join(", ");
+
+      if (fallbackTags) {
+        const translatedFallback = await translateToEnglish(fallbackTags);
+        console.log(`[Unsplash Search] 🔄 Спроба резервного пошуку за наступними тегами: "${translatedFallback}"`);
+
+        const fallbackRes = await fetch(
+          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedFallback)}&orientation=landscape&client_id=${accessKey}`,
+          { method: "GET" }
+        );
+
+        if (fallbackRes.ok) {
+          const fallbackData = (await fallbackRes.json()) as { urls?: { regular?: string } };
+          const rawUrl = fallbackData?.urls?.regular;
+          return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
+        }
+      }
+
+      // 3. ОСТАТОЧНИЙ ФОЛБЕК: якщо тегів більше немає або другий пошук теж впав
+      console.warn(`[Unsplash] ⚠️ Резервний пошук за тегами теж не дав результату. Беру загальний тревел-пейзаж.`);
+      const finalRes = await fetch(
+        `https://api.unsplash.com/photos/random?query=nature,travel,scenery&orientation=landscape&client_id=${accessKey}`,
         { method: "GET" }
       );
       
-      if (fallbackRes.ok) {
-        const fallbackData = (await fallbackRes.json()) as { urls?: { regular?: string } };
-        const rawUrl = fallbackData?.urls?.regular;
+      if (finalRes.ok) {
+        const finalData = (await finalRes.json()) as { urls?: { regular?: string } };
+        const rawUrl = finalData?.urls?.regular;
         return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
       }
+
       return DEFAULT_FALLBACK_IMAGE;
     }
 
