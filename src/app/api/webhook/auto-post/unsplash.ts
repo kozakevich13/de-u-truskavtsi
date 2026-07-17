@@ -28,18 +28,24 @@ async function translateToEnglish(text: string): Promise<string> {
     );
     if (!response.ok) return text;
     
-    const data = await response.json();
-    // Збираємо перекладений рядок докупи
-    const translatedText = data[0].map((item: any) => item[0]).join("");
-    return translatedText || text;
+    // Структура відповіді Google API: [[["перекладений_текст", "оригінал", ...]], ...]
+    const data = (await response.json()) as [Array<[string, string, ...unknown[]]>, ...unknown[]];
+    
+    // Безпечно збираємо перекладені частини тексту
+    if (data && data[0]) {
+      const translatedText = data[0].map((item) => item[0]).join("");
+      return translatedText || text;
+    }
+    
+    return text;
   } catch (err) {
     console.error("[Translate] ❌ Помилка перекладу:", err);
-    return text; // Якщо впав переклад, повертаємо оригінал
+    return text; 
   }
 }
 
 /**
- * Шукає випадкове релевантне фото на Unsplash за ключовими словами статті.
+ * Шукає випадкове релевантне photo на Unsplash за ключовими словами статті.
  * Автоматично перекладає кирилицю англійською мовою.
  */
 export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
@@ -49,11 +55,9 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   if (!cleanKeyword) return DEFAULT_FALLBACK_IMAGE;
 
   try {
-    // 1. Перекладаємо ключові слова англійською (наприклад: "іспанська кухня" -> "spanish cuisine")
     const translatedQuery = await translateToEnglish(cleanKeyword);
     console.log(`[Unsplash Search] 🔍 Запит після перекладу: "${translatedQuery}"`);
 
-    // 2. Основний пошук за перекладеними словами
     const res = await fetch(
       `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
       { method: "GET" }
@@ -62,21 +66,20 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
     if (!res.ok) {
       console.warn(`[Unsplash] ⚠️ За запитом "${translatedQuery}" нічого не знайдено. Пробую нейтральний фолбек.`);
       
-      // 3. Нейтральний резервний пошук (БЕЗ Карпат), наприклад просто ресторан, подорож або спа
       const fallbackRes = await fetch(
         `https://api.unsplash.com/photos/random?query=restaurant,travel&orientation=landscape&client_id=${accessKey}`,
         { method: "GET" }
       );
       
       if (fallbackRes.ok) {
-        const fallbackData = await fallbackRes.json();
-        const rawUrl = fallbackData?.urls?.regular; // замінено з .raw на .regular
+        const fallbackData = (await fallbackRes.json()) as { urls?: { regular?: string } };
+        const rawUrl = fallbackData?.urls?.regular;
         return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
       }
       return DEFAULT_FALLBACK_IMAGE;
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as { urls?: { regular?: string } };
     const rawUrl = data?.urls?.regular;
     return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
   } catch (err) {
