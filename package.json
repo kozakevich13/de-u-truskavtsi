@@ -17,6 +17,7 @@
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "google-auth-library": "^10.7.0",
+    "google-translate-api-next": "^0.1.0",
     "googleapis": "^172.0.0",
     "googleauth": "^3.0.2",
     "leaflet": "^1.9.4",

@@ -1,19 +1,19 @@
-// unsplash.ts
+import translate from 'google-translate-api-next';
 
 const accessKey = process.env.UNSPLASH_ACCESS_KEY;
 const DEFAULT_FALLBACK_IMAGE = "/images/posts/default-truskavets.jpg";
 
 /**
- * Додає параметри оптимізації Unsplash до URL, щоб зменшити вагу картинки
+ * Додає параметри оптимізації Unsplash до URL
  */
 function optimizeUnsplashUrl(url: string): string {
   if (!url || !url.includes("images.unsplash.com")) return url;
   
   try {
     const parsedUrl = new URL(url);
-    parsedUrl.searchParams.set("w", "1200");       // Максимальна ширина для блогу
-    parsedUrl.searchParams.set("q", "80");         // Оптимальна якість
-    parsedUrl.searchParams.set("auto", "format");  // Автоматичний вибір сучасного формату (WebP)
+    parsedUrl.searchParams.set("w", "1200");
+    parsedUrl.searchParams.set("q", "80");
+    parsedUrl.searchParams.set("auto", "format");
     return parsedUrl.href;
   } catch {
     return url;
@@ -21,29 +21,51 @@ function optimizeUnsplashUrl(url: string): string {
 }
 
 /**
- * Шукає випадкове релевантне фото на Unsplash за ключовим словом.
- * Повертає оптимізований URL або дефолтне локальне фото у разі помилки.
+ * Перекладає текст англійською мовою. 
+ * Якщо переклад не вдається, повертає оригінальний текст.
  */
-export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
+async function translateToEnglish(text: string): Promise<string> {
+  try {
+    // Автоматично визначає мову (наприклад, українську) і перекладає на англійську (en)
+    const res = await translate(text, { to: 'en' });
+    return res.text || text;
+  } catch (err) {
+    console.error("[Translation Service] ❌ Помилка перекладу тайтлу:", err);
+    return text; // fallback до оригіналу, якщо сервіс ліг
+  }
+}
+
+/**
+ * Шукає випадкове фото на Unsplash.
+ * Автоматично перекладає назву статті англійською для кращого пошуку.
+ */
+export async function fetchUnsplashPhoto(articleTitle: string): Promise<string> {
   if (!accessKey) return DEFAULT_FALLBACK_IMAGE;
 
+  const cleanTitle = articleTitle.trim();
+  if (!cleanTitle) return DEFAULT_FALLBACK_IMAGE;
+
   try {
-    const refinedQuery = `Carpathians Ukraine ${keyword}`;
+    // Перекладаємо назву статті англійською мовою
+    const translatedQuery = await translateToEnglish(cleanTitle);
+    console.log(`[Unsplash Search] 🔍 Шукаю фото за запитом: "${translatedQuery}" (оригінал: "${cleanTitle}")`);
+
+    // 1. Основний пошук за англійським перекладом назви
     const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(refinedQuery)}&orientation=landscape&client_id=${accessKey}`,
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
       { method: "GET" }
     );
 
     if (!res.ok) {
-      // Резервний запит, якщо за специфічним ключем нічого не знайдено
+      // 2. Резервний пошук, якщо за специфічним тайтлом нічого не знайшлося
       const fallbackRes = await fetch(
-        `https://api.unsplash.com/photos/random?query=Carpathians&orientation=landscape&client_id=${accessKey}`,
+        `https://api.unsplash.com/photos/random?query=nature&orientation=landscape&client_id=${accessKey}`,
         { method: "GET" }
       );
       
       if (fallbackRes.ok) {
         const fallbackData = await fallbackRes.json();
-        const rawUrl = fallbackData?.urls?.raw;
+        const rawUrl = fallbackData?.urls?.regular;
         return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
       }
       return DEFAULT_FALLBACK_IMAGE;
