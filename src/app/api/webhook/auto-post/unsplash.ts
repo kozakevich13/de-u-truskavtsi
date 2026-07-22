@@ -44,7 +44,7 @@ async function translateToEnglish(text: string): Promise<string> {
 
 /**
  * Шукає випадкове релевантне photo на Unsplash за ключовими словами статті.
- * Автоматично перекладає кирилицю англійською мовою.
+ * Шукає ТІЛЬКИ за першими 2 тегами, а в разі невдачі — за останніми 2 тегами.
  */
 export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
   if (!accessKey) return DEFAULT_FALLBACK_IMAGE;
@@ -57,65 +57,52 @@ export async function fetchUnsplashPhoto(keyword: string): Promise<string> {
     ? rawKeyword.split(",").map(t => t.trim()).filter(Boolean)
     : [rawKeyword];
 
-  // 1. Беремо перші 2 теги для основного пошуку
-  const primaryTags = allTags.slice(0, 2).join(", ");
-  
-  // ЛОГ: Виводимо оригінальні слова для основного пошуку
-  console.log(`[Unsplash Tags] 🎯 Для ОСНОВНОГО пошуку обрано теги: "${primaryTags}"`);
+  // 1. ПЕРШІ 2 ТЕГИ
+  const firstTwoTags = allTags.slice(0, 2).join(", ");
+  console.log(`[Unsplash Tags] 🎯 Спроба 1 (Перші 2 теги): "${firstTwoTags}"`);
 
   try {
-    const translatedQuery = await translateToEnglish(primaryTags);
-    console.log(`[Unsplash Search] 🔍 Основний запит після перекладу: "${translatedQuery}"`);
-
+    const translatedFirstQuery = await translateToEnglish(firstTwoTags);
+    console.log(`[Unsplash Search] 🔍 Основний запит після перекладу: "${translatedFirstQuery}"`);
+    
     const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedQuery)}&orientation=landscape&client_id=${accessKey}`,
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedFirstQuery)}&orientation=landscape&client_id=${accessKey}`,
       { method: "GET" }
     );
 
-    if (!res.ok) {
-      console.warn(`[Unsplash] ⚠️ За основним запитом "${translatedQuery}" нічого не знайдено.`);
-      
-      // 2. РЕЗЕРВНИЙ ПОШУК: Намагаємося взяти НАСТУПНІ 3 теги з оригінального списку
-      const fallbackTags = allTags.slice(2, 5).join(", ");
-
-      if (fallbackTags) {
-        // ЛОГ: Виводимо оригінальні слова для резервного пошуку
-        console.log(`[Unsplash Tags] 🔄 ОСНОВНИЙ пошук впав. Для РЕЗЕРВНОГО пошуку беру теги: "${fallbackTags}"`);
-
-        const translatedFallback = await translateToEnglish(fallbackTags);
-        console.log(`[Unsplash Search] 🔄 Резервний запит після перекладу: "${translatedFallback}"`);
-
-        const fallbackRes = await fetch(
-          `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedFallback)}&orientation=landscape&client_id=${accessKey}`,
-          { method: "GET" }
-        );
-
-        if (fallbackRes.ok) {
-          const fallbackData = (await fallbackRes.json()) as { urls?: { regular?: string } };
-          const rawUrl = fallbackData?.urls?.regular;
-          return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
-        }
-      }
-
-      // 3. ОСТАТОЧНИЙ ФОЛБЕК: якщо тегів більше немає або другий пошук теж впав
-      console.warn(`[Unsplash] ⚠️ Резервний пошук за тегами теж не дав результату. Беру загальний тревел-пейзаж.`);
-      const finalRes = await fetch(
-        `https://api.unsplash.com/photos/random?query=nature,travel,scenery&orientation=landscape&client_id=${accessKey}`,
-        { method: "GET" }
-      );
-      
-      if (finalRes.ok) {
-        const finalData = (await finalRes.json()) as { urls?: { regular?: string } };
-        const rawUrl = finalData?.urls?.regular;
-        return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
-      }
-
-      return DEFAULT_FALLBACK_IMAGE;
+    if (res.ok) {
+      const data = (await res.json()) as { urls?: { regular?: string } };
+      const rawUrl = data?.urls?.regular;
+      if (rawUrl) return optimizeUnsplashUrl(rawUrl);
     }
 
-    const data = (await res.json()) as { urls?: { regular?: string } };
-    const rawUrl = data?.urls?.regular;
-    return rawUrl ? optimizeUnsplashUrl(rawUrl) : DEFAULT_FALLBACK_IMAGE;
+    console.warn(`[Unsplash] ⚠️ За першими тегами "${translatedFirstQuery}" нічого не знайдено.`);
+
+    // 2. ОСТАННІ 2 ТЕГИ (якщо тегів усього більше ніж 2)
+    if (allTags.length > 2) {
+      const lastTwoTags = allTags.slice(-2).join(", ");
+      console.log(`[Unsplash Tags] 🔄 Спроба 2 (Останні 2 теги): "${lastTwoTags}"`);
+
+      const translatedLastQuery = await translateToEnglish(lastTwoTags);
+      console.log(`[Unsplash Search] 🔄 Резервний запит після перекладу: "${translatedLastQuery}"`);
+
+      const fallbackRes = await fetch(
+        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(translatedLastQuery)}&orientation=landscape&client_id=${accessKey}`,
+        { method: "GET" }
+      );
+
+      if (fallbackRes.ok) {
+        const fallbackData = (await fallbackRes.json()) as { urls?: { regular?: string } };
+        const rawUrl = fallbackData?.urls?.regular;
+        if (rawUrl) return optimizeUnsplashUrl(rawUrl);
+      }
+
+      console.warn(`[Unsplash] ⚠️ За останніми тегами "${translatedLastQuery}" теж нічого не знайдено.`);
+    }
+
+    // Якщо нічого не знайшлося — віддаємо локальний дефолт
+    return DEFAULT_FALLBACK_IMAGE;
+
   } catch (err) {
     console.error("[Unsplash Service] ❌ Критична помилка підбору фото:", err);
     return DEFAULT_FALLBACK_IMAGE;
