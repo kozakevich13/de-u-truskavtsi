@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { motion, Variants } from "framer-motion";
 import type { Place } from "../types/place";
 
 const categoryLabels: Record<string, string> = {
@@ -14,7 +16,23 @@ const categoryLabels: Record<string, string> = {
   cinema: "Кінотеатр",
   byuvet: "Бювет",
   museums: "Музей",
-  entertainment: "Розваги"
+  entertainment: "Розваги",
+};
+
+// Варіанти анімації появи та ховер-ефектів
+const cardVariants: Variants = {
+  hidden: { 
+    opacity: 0, 
+    y: 20 
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { 
+      duration: 0.4, 
+      ease: [0.215, 0.61, 0.355, 1] 
+    } 
+  },
 };
 
 export default function PlaceCard({
@@ -24,12 +42,17 @@ export default function PlaceCard({
   place: Place;
   onShow?: (p: Place) => void;
 }) {
-  // Виносимо URL в константу для зручності
   const placeUrl = `/${place.category}/${place.slug}`;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-      
+    <motion.article 
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
+    >
       {/* 1. Посилання на зображенні */}
       <Link 
         href={placeUrl}
@@ -42,7 +65,6 @@ export default function PlaceCard({
         {place.main_image ? (
           <Image
             src={place.main_image.trim()}
-            // Додаємо назву закладу в alt — це важливо для SEO внутрішньої сторінки
             alt={`${categoryLabels[place.category] || ''} ${place.name} Трускавець`}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -59,7 +81,6 @@ export default function PlaceCard({
       {/* 2. Контентна частина */}
       <div className="flex-grow p-4">
         <div className="flex items-start justify-between gap-2">
-          {/* РОБИМО НАЗВУ ПОСИЛАННЯМ (Найважливіша зміна для SEO) */}
           <Link href={placeUrl} className="flex-grow group/title">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 transition-colors">
               {place.name}
@@ -73,7 +94,6 @@ export default function PlaceCard({
           )}
         </div>
         
-        {/* Адреса залишається просто текстом */}
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
           {place.address}
         </p>
@@ -111,6 +131,6 @@ export default function PlaceCard({
           На мапі
         </button>
       </div>
-    </article>
+    </motion.article>
   );
 }

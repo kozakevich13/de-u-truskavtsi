@@ -3,6 +3,7 @@ export const revalidate = 86400;
 import { Metadata } from "next";
 import { supabase } from "./lib/supabase";
 import HomeClient from "./components/HomeClient";
+import HomeHeader from "./components/HomeHeader";
 import { Graph, LocalBusiness, ListItem } from "schema-dts"; 
 
 export const metadata: Metadata = {
@@ -32,7 +33,6 @@ export default async function HomePage() {
         "@type": "ItemList",
         "name": "Популярні заклади Трускавця",
         "itemListElement": initialPlaces.slice(0, 15).map((place, index): ListItem => {
-          // Створюємо об'єкт з типом LocalBusiness
           const businessItem: LocalBusiness = {
             "@type": "LocalBusiness",
             "name": place.name,
@@ -74,15 +74,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <header className="mb-10 text-center md:text-left">
-        <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 md:text-6xl mb-4">
-          Трускавець <span className="text-blue-600 dark:text-blue-400">2026</span>
-        </h1>
-        <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
-          Найповніший путівник: від бюветів та парків до сучасних кав&apos;ярень та ресторанів. 
-          Актуальні локації та чесні відгуки.
-        </p>
-      </header>
+      <HomeHeader />
 
       <HomeClient initialPlaces={initialPlaces} />
     </main>
