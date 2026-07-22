@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next"; 
 import { Nunito } from "next/font/google"; 
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
 import Header from "./components/Header";
+import Footer from "./components/Footer"; // 1. Додано імпорт
 
 const nunito = Nunito({
   subsets: ["cyrillic", "latin"],
@@ -79,11 +80,15 @@ export default function RootLayout({
   return (
     <html lang="uk"> 
       <body
-        className={`${nunito.className} antialiased`}
+        className={`${nunito.className} antialiased min-h-screen flex flex-col bg-zinc-950 text-white`}
         suppressHydrationWarning={true}
       >
         <Header />
-        {children}
+        {/* main із flex-1 розтягує контент і виштовхує футер донизу */}
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
         <Analytics />
       </body>
     </html>
